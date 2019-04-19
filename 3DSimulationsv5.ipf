@@ -484,17 +484,33 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		//s3d.scatter3D += scatter3Dsum/(180/anglestep)
 		
 		RadialIntegratesystem(s3d)
+
+		
+		
 		StoreIntegrations(s3d)
 		// visualizescatter(s3d) // updates displays of scattering profiles
 		//(re)create layout of scattering for an energy
 		//CreateSimLayout()
 		// update the layout (projections, 2D scattering pattern, label, and cuts)
 		//doupdate
-		dowindow /f simulationlayout
-		ModifyGraph/w=ParaPerpInt hbFill(int3Dpara)=2
-		doupdate
+		
+		//doupdate
 		if(s3d.movie)
+			killwindow /z simulation_layout
+		
+		// make the display
+			createsimlayout()
+			TextBox/w=Simulation_Layout/C/N=text5/F=0/A=RT/X=51.85/Y=37.15/G=(16386,65535,16385) "\\Z24"+num2str(s3d.en)+" eV"
+			SetDrawLayer /w=RatioIntensity /k userfront
+			SetDrawEnv /w=RatioIntensity ycoord= left,linefgc= (65280,0,0),dash= 1,linethick= 3.00;DelayUpdate
+			DrawLine/w=RatioIntensity 0,s3d.en,1,s3d.en
+			SetDrawLayer /w=ScatteringIntensity /k userfront
+			SetDrawEnv /w=ScatteringIntensity ycoord= left,linefgc= (65280,0,0),dash= 1,linethick= 3.00;DelayUpdate
+			DrawLine/w=ScatteringIntensity 0,s3d.en,1,s3d.en
 			SavePict/O/WIN=Simulation_Layout /E=-5/P=_PictGallery_/w=(0,0,800,800) as "SimPict"
+			dowindow /f simulationlayout
+			ModifyGraph/w=ParaPerpInt hbFill(int3Dpara)=2
+			doupdate
 			AddMovieFrame/PICT=SimPict
 			AddMovieFrame/PICT=SimPict
 			AddMovieFrame/PICT=SimPict
@@ -982,6 +998,48 @@ function model3D_existing(s3d)
 		print "Warning : Density4 wave was not found - If the number of materials is less than 5, this is fine :)"
 		return 1
 	endif
+end
+
+function/s variables_existingal()
+	return ""
+end
+function/s special_existingal()
+	return "IncludesAlignment"
+end
+function model3D_existingal(s3d)
+	// loads existing model into memory for the rest of the calculation
+	// no parameter wave is required
+	struct ThreeDSystem &s3d
+	wave/z s3d.density1 = density1
+	
+	wave/z s3d.m1 = m1
+	wave/z s3d.m2 = m2
+	wave/z s3d.m3 = m3
+	wave/z s3d.m4 = m4
+	wave/z s3d.m5 = m5
+	
+	
+	
+	if(!waveexists(s3d.density1))
+		print "Density1 wave was not found"
+		return -1
+	endif
+	wave/z s3d.density2 = density2
+	if(!waveexists(s3d.density1))
+		print "Warning : Density2 wave was not found - If the number of materials is less than 3, this is fine :)"
+		return 1
+	endif
+	wave/z s3d.density3 = density3
+	if(!waveexists(s3d.density1))
+		print "Warning : Density3 wave was not found - If the number of materials is less than 4, this is fine :)"
+		return 1
+	endif
+	wave/z s3d.density4 = density4
+	if(!waveexists(s3d.density1))
+		print "Warning : Density4 wave was not found - If the number of materials is less than 5, this is fine :)"
+		return 1
+	endif
+	
 end
 
 function /wave radialintegratew(wave1,minangle,maxangle,outputwavename)
@@ -2646,222 +2704,25 @@ function model3D_fibrals(s3d)
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
 end
 
-function /s variables_discs()
-	string variables
-	variables = "Interpenetration [voxels],SetVariable,2;"
-	variables = variables + "Number of Discs (Max),SetVariable,500;"
-	variables = variables + "PolyDispursity (sigma of radiuses),setvariable,1;"
-	variables = variables + "Minimum Radius,SetVariable,5;"
-	variables = variables + "Maximum Radius,SetVariable,8;"
-	variables = variables + "Shell Thickness[0,5],SetVariable,3;"
-	variables = variables + "Shell Sigma,SetVariable,1;"
-	variables = variables + "core [1-radial, 2-axial, 3-tangential],SetVariable,1;"
-	variables = variables + "Shell [1-radial, 2-axial, 3-tangential],1;"
-	variables = variables + "Sigma deg (main axis from vertical),SetVariable,5;"
-	variables = variables + "Volume Fraction (<1),SetVariable,.5;"
-	variables = variables + "Noise,SetVariable,0;"
-	variables = variables + "Minimum Seperation,SetVariable,0.3;"
-	variables = variables + "Minimum disc height,SetVariable,5;"
-	variables = variables + "Maximum disc height,SetVariable,40;"
-	return variables
-end
-function /s special_discs()
-	return "IncludesAlignment"
-end
-function model3D_discs(s3d)
-
-	struct ThreeDSystem &s3d
-	if(itemsinlist(s3d.paramstring,",")<11)
-		return -1
-	endif
-	newdatafolder /o/s CreatingDiscs
-	variable interpenetration = 	str2num(stringfromlist( 0 ,s3d.paramstring,","))
-	variable Discnum = 		str2num(stringfromlist( 1 ,s3d.paramstring,","))
-	variable pd = 				str2num(stringfromlist( 2 ,s3d.paramstring,","))
-	variable thickness = 		s3d.thickness
-	variable minsize = 		str2num(stringfromlist( 3 ,s3d.paramstring,","))
-	variable maxsize = 		str2num(stringfromlist( 4 ,s3d.paramstring,","))
-	variable shellThickness = 		str2num(stringfromlist( 5 ,s3d.paramstring,","))
-	variable shellSigma = 		str2num(stringfromlist( 6 ,s3d.paramstring,","))
-	variable CoreAlign = 		str2num(stringfromlist( 7 ,s3d.paramstring,","))
-	variable ShellAlign = 		str2num(stringfromlist( 8 ,s3d.paramstring,","))
-	variable angsigma = 		str2num(stringfromlist( 9 ,s3d.paramstring,","))
-	variable volfrac = 			str2num(stringfromlist( 10 ,s3d.paramstring,","))
-	variable noise = 			str2num(stringfromlist( 11 ,s3d.paramstring,","))
-	variable minsep = 		str2num(stringfromlist( 12 ,s3d.paramstring,","))
-	variable minlength = 		str2num(stringfromlist( 13 ,s3d.paramstring,","))
-	variable maxlength = 		str2num(stringfromlist( 14 ,s3d.paramstring,","))
-	
-	make /n=(thickness*s3d.num^2,3)/o rmat
-	make /o /n=(thickness,s3d.num,s3d.num) mat=0,xwave, ywave, zwave
-	make /n=( thickness,s3d.num,s3d.num,3)/o vecmat=0
-	if(minsep<1)
-		make/B/U /o /n=(thickness,s3d.num,s3d.num,maxsize) exmat =  (p <= t/(1+minsep)) || (q <= t/(1+minsep)) || (r <= t/(1+minsep) ) || (p >= thickness-t/(1+minsep)) || (q >= s3d.num-t/(1+minsep)) || (r >= s3d.num-t/(1+minsep)) ? 0 : 1
-	else
-		make/B/U /o /n=(thickness,s3d.num,s3d.num,maxsize) exmat =  (p <= t-minsep) || (q <= t-minsep) || (r <= t-minsep) || (p >= thickness-t+minsep) || (q >= s3d.num-t+minsep) || (r >= s3d.num-t+minsep) ? 0 : 1
-	endif
-	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave, tempx
-	if(s3d.movie)
-		Execute("Fibrals3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
-		Execute("exportgizmo wave as \"testimage\";Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
-	endif
-
-	xwave = x
-	ywave = y
-	zwave = z
-	redimension /n=(thickness*s3d.num*s3d.num) xwave, ywave, zwave
-	rmat[][0] = xwave[p]
-	rmat[][1] = ywave[p]
-	rmat[][2] = zwave[p]
-	variable testcx,testcy,testcz,i,radius, orad, cx, cy, cz, failed, fnum =0, f2num=0, xmn,xmx,ymn,ymx,zmn,zmx, loc, qfnum=0, theta, phi, shellrad
-	variable tx,ty,tz,hit, mx=thickness-1, my=s3d.num-1, mz=s3d.num-1, length
-	fnum=0
-	make /o /n=3 vec, axis
-	for(i=0;i<Discnum;i+=1)
-		radius=max(1,gnoise(pd)+s3d.size)
-		shellrad = radius + max(0,gnoise(shellsigma)+shellThickness)
-		tempx = exmat[p][q][r][ceil(radius+shellrad)] // matrix that keeps safe pixels to start a disc, based on it's radius
-		duplicate /o tempx, tempwave
-		redimension /n=(numpnts(tempwave)) tempwave
-		integrate tempwave /D=intwave
-		if(wavemax(intwave) < 5)
-			fnum+=1
-			if(fnum<5)
-				continue
-			else
-				print "warning:  can't fit in anymore discs, only " + num2str(i-fnum) + " discs were created"
-				break
-			endif
-		endif
-		loc = binarysearch(intwave, enoise(wavemax(intwave)/2)+wavemax(intwave)/2)
-		
-		cx = rmat[loc][0]
-		cy = rmat[loc][1]
-		cz = rmat[loc][2]
-		
-		theta = (0 + gnoise(angsigma)) * pi / 180 // polar angle of the fibral axis relative to the film normal (right now it is mostly in plane)
-		phi = enoise(pi)  // (azimuthal angle of the axis of the fibral)
-		axis[2] = sin(theta)*cos(phi)
-		axis[1] = sin(theta)*sin(phi)
-		axis[0] = cos(theta)
-		
-		
-		
-		
-		//forward direction
-		hit=0
-		length=0
-		tx=cx // center location
-		ty=cy
-		tz=cz
-		do
-			// these calculations need to change basically, replace the axis[t] with the math for the vector alignment suitable (axial alignment is correct already)
-			// also, we are allowing max length thickness, probably not ideal
-			if(coreAlign==1) // radial (project point onto axis, find distance from point to that intercept) ... good luck
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-minlength,0),min(tz+minlength,mz)][]= (p-tx)^2 + (q-ty)^2 < radius^2 && abs(r-tz) < 1 ? axis[t] : vecmat
-			elseif(coreAlign==2) // axial (we have this alerady)
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-minlength,0),min(tz+minlength,mz)][]= (p-tx)^2 + (q-ty)^2 < radius^2 && abs(r-tz) < 1 ? axis[t] : vecmat
-			elseif(coreAlign==3) //tangential (find the cross product of axial and radial)
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-minlength,0),min(tz+minlength,mz)][]= (p-tx)^2 + (q-ty)^2 < radius^2 && abs(r-tz) < 1 ? axis[t] : vecmat
-			endif
-			
-			
-			
-			exmat[max(tx-radius-maxsize,0),min(tx+radius+maxsize,mx)][max(ty-radius-maxsize,0),min(ty+radius+maxsize,my)][max(tz-radius-maxsize,0),min(tz+radius+maxsize,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius+t)^2 ? 0 : exmat
-			tx += vec[0]
-			ty += vec[1]
-			tz += vec[2]
-			hit = 1-tempx[Min(max(tx,0),mx)][Min(max(ty,0),my)][Min(max(tz,0),mz)]
-			length +=1
-		while( length<maxlength &&  hit==0 && tx <= mx && ty <= my && tz <= mz && tx>=0 && ty>=0 && tz>=0 )
-		//other direction
-		hit=0
-		tx=cx
-		ty=cy
-		tz=cz
-		length-=1
-		do
-			//repeat the code from the above loop when it is complete
-			
-			
-			
-			tx -= vec[0]
-			ty -= vec[1]
-			tz -= vec[2]
-			hit = 1-tempx[Min(max(tx,0),mx)][Min(max(ty,0),my)][Min(max(tz,0),mz)] // if we hit another fibral or the edge, tempx will be 0 (hit will be 1)  -  until then, hit will equal 0
-			length+=1
-		while( length<maxlength && hit==0 && tx <= mx && ty <= my && tz <= mz && tx>=0 && ty>=0 && tz>=0 )
-
-		mat = sqrt( vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 )
-		imagefilter /n=3 /o gauss3d, mat
-		if(s3d.movie)
-			execute("ModifyGizmo /n=Fibrals3D update=2")
-			doupdate
-			Execute "exportgizmo wave as \"testimage\""
-			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
-			doupdate
-			savepict /p=_PictGallery_ /E=-5 /N=Spinoidal3DLayout /o as "Frame3D"
-			addmovieframe /pict=Frame3D
-		endif
-		
-		if(length < minlength)
-			//print "Created a disc too short"
-			f2num+=1
-		endif
-		
-		if(f2num>5 + i/10) // if ever more than 10% + 5 are short, then let's stop
-			print "too many short discs have been created, ending disc creation"
-			break
-		endif
-		
-	endfor
-	if(interpenetration > 1)
-		mat = vecmat[p][q][r][0]
-		imagefilter /n=(interpenetration) /o gauss3d, mat
-		vecmat[][][][0] = mat[p][q][r]
-		mat = vecmat[p][q][r][1]
-		imagefilter /n=(interpenetration) /o gauss3d, mat
-		vecmat[][][][1] = mat[p][q][r]
-		mat = vecmat[p][q][r][2]
-		imagefilter /n=(interpenetration) /o gauss3d, mat
-		vecmat[][][][2] = mat[p][q][r]
-	endif
-	mat = sqrt( vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 )
-	
-	setdatafolder ::
-	variable fibralvol = mean(mat)
-	variable rhomatrix = (volfrac - fibralvol)/(1-fibralvol)
-	if(rhomatrix < 0 )
-		print "Volume fraction is too low, make less discs"
-		return -1
-	endif
-	make /n=(thickness,s3d.num,s3d.num,4) /o m1=0, m2=0
-	wave s3d.m1=m1, s3d.m2=m2
-	s3d.m1[][][][0,2] = vecmat[p][q][r][t]
-	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r])
-	s3d.m2[][][][3] = (1-rhomatrix) * (1-mat[p][q][r])
-	
-	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
-end
-
 function /s variables_lamella()
 	string variables
-	variables = "Nucleation Probability [%],SetVariable,0.01;" //0
-	//variables = variables + "Xtal Thickness [px],SetVariable,5;" get from size parameter
-	variables = variables + "Xtal thickness in lamella [%],SetVariable,67;" //1
-	variables = variables + "Xtal variability sigma [px],SetVariable,.3;" //2
-	//variables = variables + "Amorphous thickness [px],SetVariable,3;"
-	variables = variables + "Amorph Alignment [-1 1][L ||],SetVariable, 0;" //3
-	variables = variables + "Amorph Alignment width [px],SetVariable,1;" //4
-	variables = variables + "Amorphous variability σ [px],SetVariable,.3;"
-	variables = variables + "Inter-lamella angular σ [rad],SetVariable,.1;"
-	variables = variables + "Intra-lamella angular σ [rad],SetVariable,.02;"
-	variables = variables + "Relative crystalline density [delta%},SetVariable,10;"
-	variables = variables + "Grain Boundary [px],SetVariable,3;"
-	variables = variables + "Intra-to-Inter lamella growth factor,SetVariable,200;"
-	variables = variables + "Lamella region volume [%},SetVariable,80;"
-	variables = variables + "Amorphous region thickness [%},SetVariable,80;"
-	variables = variables + "Material 2 in amorphous region [%},SetVariable,80;"
+	variables = "Nucleation Probability [%],SetVariable,0.002;" 							//		   0
+	variables = variables + "Xtal thickness in lamella [%],SetVariable,67;" 			//		   1
+	variables = variables + "Xtal variability sigma [px],SetVariable,1.5;" 			//		   2
+	variables = variables + "Amorph Alignment [-1 1][L ||],SetVariable, -.5;" 		//		   3
+	variables = variables + "Amorph Alignment width [px],SetVariable,3;" 				//		   4
+	variables = variables + "Amorphous variability σ [px],SetVariable,2;" 				//		   5
+ 	variables = variables + "Inter-lamella angular σ [rad],SetVariable,0.4;" 			//		   6
+	variables = variables + "Intra-lamella angular σ [rad],SetVariable,0.04;" 		//		   7
+	variables = variables + "Relative crystalline density [delta%},SetVariable,10;" //		   8
+	variables = variables + "Grain Boundary [px],SetVariable,1;" 							//		   9
+	variables = variables + "Intra-to-Inter lamella growth factor,SetVariable,100;" //		  10
+	variables = variables + "Lamella region volume [%},SetVariable,80;" 				//		  11
+	variables = variables + "Amorphous region thickness [%},SetVariable,80;" 			//		  12
+	variables = variables + "Material 2 in amorphous region [%},SetVariable,0;" 		//		  13
+	variables = variables + "Test threshold for Edge finding [%],SetVariable,50;" 	//		  14
+	variables = variables + "Lamella Edge Density [%],SetVariable,90;" 					//		  15
+	variables = variables + "swap fringe/amorph alignment [0 1],SetVariable,90;" 	//		  16
 	return variables
 end
 function /s special_lamella()
@@ -2872,7 +2733,7 @@ end
 function model3D_lamella(s3d)
 
 	struct ThreeDSystem &s3d
-	if(itemsinlist(s3d.paramstring,",")<12)
+	if(itemsinlist(s3d.paramstring,",")<14)
 		return -1
 	endif
 	variable nucprob = 			str2num(stringfromlist( 0 ,s3d.paramstring,","))
@@ -2892,6 +2753,11 @@ function model3D_lamella(s3d)
 	variable Xtalpct = 			str2num(stringfromlist( 11 ,s3d.paramstring,","))
 	variable regiondens = 		str2num(stringfromlist( 12 ,s3d.paramstring,","))
 	variable mat2inamorph = 		str2num(stringfromlist( 13 ,s3d.paramstring,","))/100
+	variable edgethreshold = 	str2num(stringfromlist( 14 ,s3d.paramstring,","))/100
+	variable Mat2Density = 		str2num(stringfromlist( 15 ,s3d.paramstring,","))/100
+	variable swapfringe = 		str2num(stringfromlist( 16 ,s3d.paramstring,","))
+	
+	
 	variable nxy = s3d.num
 	
 	// outputs are m1-4 and density1-3 
@@ -2900,7 +2766,7 @@ function model3D_lamella(s3d)
 	//m3=material 2 in amorphous phase, 
 	//m4=vacuum (roughness)
 
-	variable nnd = 2
+	variable nnd = 3
 	
 	variable stopsum = 255-(2.55*Xtalpct) // average occupation level to stop at (out of 255) (~5 %)
 	variable zratio = 100 // ratio of z probability to x and y (level of in plane alignment is here
@@ -2910,7 +2776,7 @@ function model3D_lamella(s3d)
 	if(s3d.movie)
 		killwindow /z alignmentmap
 	endif
-	make /d/o/n=(nz,nxy,nxy,4) dens1,mat // the density and m waves required for calculations
+	make /d/o/n=(nz,nxy,nxy,4) dens1,mat,mat2 // the density and m waves required for calculations
 	newdatafolder /o/s working
 	// make system
 	make /d/o/n=(nxy,nxy,nz) alignx=0, aligny=0, alignz=0, nucmap, alignmag=0, thickness=0, lcx=0, lcy=0, lcz=0, edge=0, gradx, grady, gradz
@@ -2943,7 +2809,6 @@ function model3D_lamella(s3d)
 			endfor
 		endfor
 	endfor
-	//nndist = sqrt(nnoffx^2 + nnoffy^2 + nnoffz^2) // distances to the pixels
 
 	variable txloc, tyloc, tzloc, itteration=0, interfacialpixels=0, starttime, elapsedtime, lasttime, lastpercent=0
 	variable /g percentdone
@@ -2952,19 +2817,6 @@ function model3D_lamella(s3d)
 	
 	string dfolder = getdatafolder(1)
 	string/g timeleftstr="?", timeelapsedstr=time2str(ticks/60.15-starttime)
-//		
-//	killwindow /z progresspnl
-//	NewPanel /FLT=2/n=progresspnl/W=(-351,-382,-138,-268)  as "Progress"
-//	SetDrawLayer UserBack
-//	SetDrawEnv fsize= 16
-//	DrawText 74,23,"Progress:"
-//	ValDisplay valdispProgress,pos={8.00,28.00},size={200.00,41.00},bodyWidth=200
-//	ValDisplay valdispProgress,frame=4,limits={0,100,0},barmisc={10,1},value=#(dfolder+"percentdone"),highColor= (16385,16388,65535)
-//	SetVariable timeremaining,pos={26.00,78.00},size={150.00,17.00},title="Time Remaining: "
-//	SetVariable timeelapsed,pos={26.00,92.00},size={150.00,14.00},title="Time Elapsed: "
-//	SetVariable timeremaining,fSize=11,value=timeleftstr
-//	SetVariable timeelapsed,fSize=11,value=timeelapsedstr
-//	SetActiveSubwindow _endfloat_
 	string normalvecs, centervec
 	variable timerref=startmstimer
 	make /n=15 /o timerdebug=0
@@ -3100,7 +2952,7 @@ function model3D_lamella(s3d)
 			timerdebugname[4] = "Nearest Neighbor lc"
 			timerref = startmstimer
 			nnmag = nnvalid? alignmag[nnx][nny][nnz] : nan //(0 - amorphous, 1 - crystalline, nan - non valid)
-			nnprop = nnvalid? (-nnoffx * gx - nnoffy * gy - nnoffz * gz)/nndist : nan
+			nnprop = nnvalid? ((-nnoffx * gx - nnoffy * gy - nnoffz * gz) + nnmag)/nndist : nan
 			//  the maximum number is the closest valid pixel directly in line with the propagation, so use that one to propagate
 			// if the point isn't valid, (will be nan)
 			// can only be crystalline 
@@ -3117,8 +2969,8 @@ function model3D_lamella(s3d)
 				interfacialpixels+=1
 				continue
 			endif
-			amorphprop = (nnmag[pindex]!=1) ? 1 : 0
-			if(!testprop(amorphprop,glamspd,nndist[pindex])) // if lamella propogation is favored (or not) this will fail to propogate depending on the propogator's distance (effectively slowing down propogation)
+			amorphprop = (nnmag[pindex]!=1) ? 1 : 0 // is the chosen propogator amorphous?
+			if(!testprop(amorphprop,glamspd,nndist[pindex])) // if lamella propogation is favored (or not) this will fail to propogate depending on the propogator's distance (effectively slowing down propogation) and if it is amorphous
 				empty[xloc][yloc][zloc]=255
 				continue
 			endif
@@ -3139,15 +2991,15 @@ function model3D_lamella(s3d)
 				wavestats /m=1/q/z nnaligned
 				localalignment = v_min
 				empty[xloc][yloc][zloc] = 0
-				if(nnmag[pindex]==1  && localalignment > .8 ) //crystaline and in aligned region
-					if((thickness[xloc][yloc][zloc] <= (lamthickness + gnoise(lamuncert))/2) ) // we are within an crystalline region and neighbors are all aligned, so just propagate
+				if(nnmag[pindex]==1  && localalignment > .8 ) //crystaline and in aligned region (propogating from crystalline region)
+					if((thickness[xloc][yloc][zloc] <= (lamthickness + gnoise(lamuncert))/2) ) // we are within an crystalline region and neighbors are all aligned, so just propagate (lamella -> lamella)
 						alignmag[xloc][yloc][zloc] = 1
 						bx=annx[pindex]+gnoise(XtalAngUncert) // take the alignment of the propagator
 						by=anny[pindex]+gnoise(XtalAngUncert)
 						bz=annz[pindex]+gnoise(XtalAngUncert/zratio)// add some noise but less than interface
 						
 					else
-						// the crystalline region is too large or not aligned, so we are amorphous
+						// the crystalline region is too large or not aligned, so we are amorphous  (Lamella -> amorphous)
 						alignmag[xloc][yloc][zloc] = 0
 						bx=annx[pindex]+gnoise(angularuncert) // take the alignment of the propagator
 						by=anny[pindex]+gnoise(angularuncert)
@@ -3158,7 +3010,7 @@ function model3D_lamella(s3d)
 						bz/=temp
 				
 					endif
-				elseif(nnmag[pindex]==1) // crystalline, but not aligned region -> this is an interface
+				elseif(nnmag[pindex]==1) // crystalline, but not aligned region -> this is an interface  (lamella -> fringe)
 					alignmag[xloc][yloc][zloc] = 0
 					bx=annx[pindex]+gnoise(angularuncert) // take the alignment of the propagator
 					by=anny[pindex]+gnoise(angularuncert)
@@ -3167,19 +3019,9 @@ function model3D_lamella(s3d)
 					bx/=temp
 					by/=temp
 					bz/=temp
-				else // amorphous
-
-					if(thickness[xloc][yloc][zloc] <= (lamthickness + gnoise(lamuncert))/2) // we are still within an crystalline region, so propagate, but it is from amorphous, so add noise
-						alignmag[xloc][yloc][zloc] = 1
-						bx=annx[pindex]+gnoise(angularuncert) // take the alignment of the propagator
-						by=anny[pindex]+gnoise(angularuncert)
-						bz=annz[pindex]+gnoise(angularuncert/zratio) // add some noise to the propagation because it is at an interface
-						temp = sqrt(bx^2 + by^2 + bz^2)
-						bx/=temp
-						by/=temp
-						bz/=temp
+				else // amorphous //  if we allow this, amorphous regions keep growing
 				
-					elseif(thickness[xloc][yloc][zloc] <= (lamthickness + gnoise(lamuncert))/2 + amorphthickness + gnoise(amorphuncert)) // we are within an amorphous region, so just propagate
+					if(enoise(1)>.5 && nndist[pindex]<1.5 && thickness[xloc][yloc][zloc] <= (lamthickness + gnoise(lamuncert))/2 + amorphthickness + gnoise(amorphuncert)) // we are within an amorphous region, so just propagate (amorphous -> amorphous)
 						alignmag[xloc][yloc][zloc] = 0
 						bx=annx[pindex]+gnoise(angularuncert) // take the alignment of the propagator
 						by=anny[pindex]+gnoise(angularuncert)
@@ -3188,20 +3030,8 @@ function model3D_lamella(s3d)
 						bx/=temp
 						by/=temp
 						bz/=temp
-					elseif(thickness[xloc][yloc][zloc] > (2*lamthickness + gnoise(lamuncert)+gnoise(lamuncert))/2 + amorphthickness + gnoise(amorphuncert)) // we are too big to even flip around and start a new crystal
-						//thickness[xloc][yloc][zloc] =  (lamthickness + gnoise(lamuncert))/2 +1
-						
-						alignmag[xloc][yloc][zloc] = 0
-						bx=annx[pindex]+gnoise(angularuncert) // take the alignment of the propagator
-						by=anny[pindex]+gnoise(angularuncert)
-						bz=annz[pindex]+gnoise(angularuncert/zratio) // add some noise because we are way out from the center
-						temp = sqrt(bx^2 + by^2 + bz^2)
-						bx/=temp
-						by/=temp
-						bz/=temp
-				
-					else
-						// the amorphous region is too large, so we propagate the alignment in a new crystal
+					elseif(enoise(1)>.95 && nndist[pindex]<1.5 && thickness[xloc][yloc][zloc] > (lamthickness + gnoise(lamuncert))/2 + amorphthickness + gnoise(amorphuncert))
+//						// the amorphous region is too large, so we propagate the alignment in a new crystal (amorphous -> new crystal)
 						newthickness = (lamthickness + gnoise(lamuncert))/2
 						lcx[xloc][yloc][zloc] = xloc + newthickness * (xloc-lcx[xloc][yloc][zloc])/thickness[xloc][yloc][zloc] // project a new crystal center
 						lcy[xloc][yloc][zloc] = yloc + newthickness * (yloc-lcy[xloc][yloc][zloc])/thickness[xloc][yloc][zloc]
@@ -3215,6 +3045,9 @@ function model3D_lamella(s3d)
 						bx/=temp
 						by/=temp
 						bz/=temp
+					else
+						empty[xloc][yloc][zloc]=255
+						continue
 					endif
 				endif
 				alignx[xloc][yloc][zloc] = bx
@@ -3242,7 +3075,7 @@ function model3D_lamella(s3d)
 			emptysum=0
 		endif
 		
-		if(percentdone-lastpercent > 1) //doupdate
+		if(percentdone-lastpercent > .25) //doupdate
 			itteration +=1
 			timeleftstr = time2str(min((ticks/60.15-starttime)*(100/percentdone - 1),(ticks/60.15-lasttime)*(100/(percentdone - lastpercent) - 1)))
 			if(s3d.movie)
@@ -3262,8 +3095,6 @@ function model3D_lamella(s3d)
 
 			
 			updateprogress(s3d)
-			//timeleftstr = time2str(min((ticks/60.15-starttime)*(100/percentdone - 1),(ticks/60.15-lasttime)*(100/(percentdone - lastpercent) - 1)))
-			//timeelapsedstr=time2str(ticks/60.15-starttime)
 			
 			lastpercent = round(10*percentdone)/10
 			lasttime = ticks/60.15
@@ -3279,73 +3110,81 @@ function model3D_lamella(s3d)
 		timerref = startmstimer
 			
 	while(emptysum>stopsum)
-	//print interfacialpixels
-	//killwindow /z progresspnl
-	//timeleftstr = time2str((ticks/60.15-starttime))
-	//print timeleftstr
-	//alignmag = alignx^2 + aligny^2 + alignz^2
-	//alignx /= alignmag[p][q][r]>1 ? alignmag[p][q][r] : 1
-	//aligny /= alignmag[p][q][r]>1 ? alignmag[p][q][r] : 1
-	//alignz /= alignmag[p][q][r]>1 ? alignmag[p][q][r] : 1
 	
-	duplicate/o alignx, edgesx
-	duplicate/o aligny, edgesy
+	make /n=(dimsize(alignx,0)*1.8,dimsize(alignx,1)*1.8,dimsize(alignx,2))/o alignxext = alignx[mod(p+.6*dimsize(alignx,0),dimsize(alignx,0))][mod(q+.6*dimsize(alignx,1),dimsize(alignx,1))][r]
+	make /n=(dimsize(aligny,0)*1.8,dimsize(aligny,1)*1.8,dimsize(alignx,2))/o alignyext = aligny[mod(p+.6*dimsize(aligny,0),dimsize(aligny,0))][mod(q+.6*dimsize(aligny,1),dimsize(aligny,1))][r]
+	make /n=(dimsize(aligny,0)*1.8,dimsize(aligny,1)*1.8,dimsize(alignx,2))/o alignzext = alignz[mod(p+.6*dimsize(aligny,0),dimsize(aligny,0))][mod(q+.6*dimsize(aligny,1),dimsize(aligny,1))][r]
+	make /n=(dimsize(aligny,0)*1.8,dimsize(aligny,1)*1.8,dimsize(alignx,2))/o alignmagext = alignmag[mod(p+.6*dimsize(aligny,0),dimsize(aligny,0))][mod(q+.6*dimsize(aligny,1),dimsize(aligny,1))][r]
+	
+	duplicate/o alignxext, edgesx
+	duplicate/o alignyext, edgesy
 	
 	duplicate/o edgesx, dotpn
-	dotpn = .5*abs(edgesx * edgesx[max(p-1,0)][q] + edgesy * edgesy[max(p-1,0)][q])
-	dotpn += .5*abs(edgesx * edgesx[p][max(q-1,0)] + edgesy * edgesy[p][max(q-1,0)])
-	dotpn = .5*abs(edgesx * edgesx[min(p+1,nxy)][q] + edgesy * edgesy[min(p+1,nxy)][q])
-	dotpn += .5*abs(edgesx * edgesx[p][min(q+1,nxy)] + edgesy * edgesy[p][min(q+1,nxy)])
+	dotpn = .5*abs(edgesx * edgesx[min(p+1,nxy*1.8)][q] + edgesy * edgesy[min(p+1,nxy*1.8)][q])
+	dotpn += .5*abs(edgesx * edgesx[p][min(q+1,nxy*1.8)] + edgesy * edgesy[p][min(q+1,nxy*1.8)])
 	if(GBound>2)
 		imagefilter /n=(2*floor(GBound/2)+1) /o gauss3D dotpn
 	elseif(Gbound<1)
 		dotpn=1 // no edges
 	endif
-	dotpn = dotpn>.95 ? 1 : 0
-	duplicate /o alignmag, alignmagsave
-	alignmag *= dotpn
-	imagefilter /n=3 /o Gauss3D alignmag
+	dotpn = dotpn>min(1,max(0,edgethreshold)) ? 1 : 0
+	duplicate /o alignmagext, alignmagsave
+	alignmagext *= dotpn
+	imagefilter /n=3 /o Gauss3D alignmagext
 	
 	// get the unaligned edges
-	duplicate/o alignmag, unalignmag
-	unalignmag = 1-alignmag
-	for(j=0;j<dimsize(alignmag,2);j+=1)
-		imageedgedetection /P=(j) /M=1 frei alignmag
+	duplicate/o alignmagext, unalignmagext
+	unalignmagext = 1-alignmagext
+	for(j=0;j<dimsize(alignmagext,2);j+=1)
+		imageedgedetection /P=(j) /M=1 frei alignmagext
 		wave M_ImageEdges
 		M_ImageEdges = M_ImageEdges==255 ? 0 :1
-		imagefilter /n=(max(3,amorphAlignWid)) gauss M_imageedges
-		unalignmag[][][j] *=M_imageedges[p][q] // unalignmag is the alignment within the unaligned portion
+		imagefilter/o /n=(max(3,amorphAlignWid)) gauss3D M_imageedges
+		unalignmagext[][][j] *=min(1,abs(amorphalignment)*M_imageedges[p][q]) // unalignmagext is the alignment within the unaligned portion
 	endfor
-	unalignmag *= abs(amorphalignment)
-	duplicate/o alignx, palignx, paligny // the 90 degree rotated alignment vectors(for edge alignment)
-	if(amorphalignment < 0)
-		palignx = -aligny
+	duplicate/o alignx, palignx, paligny, palignz // the 90 degree rotated alignment vectors(for edge alignment)
+	if(amorphalignment<0)
+		make /free/n=(dimsize(alignx,0),dimsize(alignx,1),dimsize(alignx,2)) /t alignnormal
+		alignnormal = normvecs(alignx,aligny,alignz,rand=1)
+		palignx = str2num(stringfromlist(0,alignnormal[p][q][r],","))
+		paligny = str2num(stringfromlist(1,alignnormal[p][q][r],","))
+		palignz = str2num(stringfromlist(2,alignnormal[p][q][r],","))
+		duplicate /free palignx, palignnorm
+		palignnorm = palignx*paligny*palignz*0==0? 1 : 0
+		palignx = palignnorm ? palignx : 0
+		paligny = palignnorm ? paligny : 0
+		palignz = palignnorm ? palignz : 0
 	else
-		paligny = aligny
-	endif	
+		palignx=alignx
+		paligny=aligny
+		palignz=alignz
+	endif
+		
+	alignmag = alignmagext[p+.4*dimsize(alignmag,0)][q+.4*dimsize(alignmag,1)][r]
 	
-	tempalignmap(alignx,aligny,alignz,alignmag,0,1) // alignmap won't show the perpindicular component
+	duplicate/o alignmag, unalignmag
+	unalignmag = unalignmagext[p+.4*dimsize(alignmag,0)][q+.4*dimsize(alignmag,1)][r]
+	if(swapfringe)
+		unalignmag = 1-unalignmag - alignmag
+	endif
 	
 	//interlamella alignment (uses amorphalignment and amorphAlignWid)
-	duplicate/o mat, mat2
 	
 	mat[][][][0] = alignz[q][r][p]*sqrt(alignmag[q][r][p]) // alignment along the beam direction (z in model, x for X-rays)
 	mat[][][][1] = alignx[q][r][p]*sqrt(alignmag[q][r][p]) // alignment along the film plane (x in model, y for X-rays)
 	mat[][][][2] = aligny[q][r][p]*sqrt(alignmag[q][r][p]) // alignment along the film plane (y in model, z in X-rays)
 	
-	mat2[][][][0] = alignz[q][r][p]*sqrt(abs(unalignmag[q][r][p]))
+	mat2[][][][0] = palignz[q][r][p]*sqrt(abs(unalignmag[q][r][p]))
 	mat2[][][][1] = palignx[q][r][p]*sqrt(abs(unalignmag[q][r][p]))
 	mat2[][][][2] = paligny[q][r][p]*sqrt(abs(unalignmag[q][r][p]))
 	mat2[][][][3] = 0
 	
 	mat[][][][3]=1-mat[p][q][r][0]^2 -mat[p][q][r][1]^2 -mat[p][q][r][2]^2 -mat2[p][q][r][0]^2 -mat2[p][q][r][1]^2 -mat2[p][q][r][2]^2
-	//mat[][][][3] = 1-mat[p][q][r][0]^2-mat[p][q][r][1]^2-mat[p][q][r][2]^2
 	 // mat is entirely either amorphous or crystalline at this point, we want to put a overall thicknessmap on top of all of this
 	
-	duplicate /o dotpn, tempdens
-	make /n=(dimsize(dotpn,0)*1.8,dimsize(dotpn,1)*1.8,dimsize(dotpn,2))/o nonxtal = dotpn[mod(p+.6*dimsize(dotpn,0),dimsize(dotpn,0))][mod(q+.6*dimsize(dotpn,1),dimsize(dotpn,1))][r]
+	duplicate /o alignmag, tempdens
 	
-	
+	duplicate /o dotpn, nonxtal
 	
 	imagefilter /o /n=11 gauss3d nonxtal
 	nonxtal = nonxtal > .5 ? 1 : 0
@@ -3364,14 +3203,15 @@ function model3D_lamella(s3d)
 	 // add in the local difference for the crystalline / amorphous differences
 	if(xtaldens>0)
 		mat[][][][3] *= 1-(xtaldens/100)
-		mat2[][][][0,2] *= sqrt(1-(-xtaldens/100))
+		mat2[][][][0,2] *= sqrt(1-(xtaldens/100))
 	else
-		mat[][][][0,2] *= sqrt(1-(-xtaldens/100))
-		//mat2[][][][0,2] *= sqrt(1-(-xtaldens/100))
+		mat[][][][0,2] *= sqrt(1-(xtaldens/100))
 	endif
-	
-	
-	
+	if(Mat2Density > 1)
+		mat *= sqrt(1-(Mat2Density-1))
+	else
+		mat2[][][][0,2] *= sqrt(Mat2Density)
+	endif
 	
 	setdatafolder foldersave
 	
@@ -3384,18 +3224,44 @@ function model3D_lamella(s3d)
 	make /n=(s3d.thickness,s3d.num,s3d.num) /o density2 = m2[p][q][r][3] + m2[p][q][r][0]^2 +m2[p][q][r][1]^2 +m2[p][q][r][2]^2 // can make different density for aligned vs unaligned
 	make /n=(s3d.thickness,s3d.num,s3d.num) /o density3 = m3[p][q][r][3]
 	m4[][][][3] = 1-density1[p][q][r]-density2[p][q][r]-density3[p][q][r] // the remaining space will fill with material 4 (usually this would be vacuum, so this is a film thickness mask)
-	
-	
+	dowindow /k alignmentmap
+
 	
 	wave s3d.m1=m1, s3d.m2=m2, s3d.m3=m3, s3d.m4 = m4
 	wave s3d.density1 = density1
 	wave s3d.density2 = density2
 	wave s3d.density3 = density3
-	
-
+	duplicate/o m1, m1save
+	duplicate/o m2, m2save
+	duplicate/o m3, m3save
+	duplicate/o m4, m4save
+	doalignmentmap("Current")
+	if(s3d.movie)
+		doupdate
+		savepict /p=_PictGallery_ /E=-5 /N=Current_map/w=(0,0,800,800) /o as "LamellaFrame"
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addmovieframe /pict=LamellaFrame
+		addtologbook(s3d,"100 % complete - lamella creation finished")
+	endif
 end
 
 function testprop(amorph,glamspeed,dist)
+	// find the probability of alignment spreading from one voxel to another, based on if it is amorphous
 	variable amorph, glamspeed, dist
 	if(glamspeed<1)
 		amorph = amorph? 0 : 1
@@ -3404,7 +3270,7 @@ function testprop(amorph,glamspeed,dist)
 	if(glamspeed<0)
 		glamspeed = 1
 	endif
-	if(!amorph)
+	if(!amorph) // if not amorphous, just propogate
 		return 1
 	endif
 	if(statsnormalcdf(3/glamspeed,dist,.38+1/glamspeed) > enoise(.5)+.5) // 
@@ -3452,11 +3318,18 @@ function /s getlocalcenter(lcx,lcy,lcz,xloc,yloc,zloc,nnoffx,nnoffy,nnoffz,ax,ay
 	return outvec
 end
 
-function /s normvecs(xin, yin, zin)
-	variable xin, yin, zin
+function /s normvecs(xin, yin, zin,[rand])
+	variable xin, yin, zin,rand
+	rand = paramisdefault(rand) ? 0 : rand
 	variable nx1, nx2, ny1, ny2, nz1, nz2, mag
 	string outvecs // the output of the function as a list of two vectors "x,y,z;a,b,c"
-	make /free win={xin, yin, zin}, wo1={1,0,0}, wo2={0,1,0}
+	if(rand)
+		make /free win={xin, yin, zin}, wo1={enoise(1),enoise(1),enoise(1)}, wo2={-wo1[1],wo1[0],wo1[3]+3}
+		wo1 /=norm(wo1)
+		wo2 /=norm(wo2)
+	else
+		make /free win={xin, yin, zin}, wo1={1,0,0}, wo2={0,1,0}
+	endif
 	cross /z/free /Dest=test win, wo1
 	if(waveexists(test))
 		if(norm(test)>0)
@@ -4305,14 +4178,27 @@ function doalignmentmap(folder,[addtolayout])
 	variable addtolayout
 	
 	addtolayout = paramisdefault(addtolayout) ? 0 : addtolayout
-	string foldersave = getdatafolder(1)
-	setdatafolder root:Packages:ScatterSim3D:$folder
-	wave m=m1
+	if(!stringmatch("Current",folder))
+		string foldersave = getdatafolder(1)
+		setdatafolder root:Packages:ScatterSim3D:$folder
+	endif
+	wave m=m1save
+	wave /z m2 = m2save
 	wave density1
+	wave /z density2
+	wave /z density3
+	wave /z density4
 	make/o /n=(dimsize(m,1)*dimsize(m,2)) xloc = 5*mod(p,dimsize(m,1)),yloc = 5*floor(p/dimsize(m,1))
+	duplicate /o yloc, yloc2
 	make/o /n=(dimsize(m,1)*dimsize(m,2)) xcomp,ycomp,zcomp
-	make/o /n=(dimsize(m,1)*dimsize(m,2),2) arrowsyay
+	make/o /n=(dimsize(m,1)*dimsize(m,2),2) arrowsyay, arrowsyay2
 	MAKE/O /N=(dimsize(m,1),dimsize(m,2)) slice = density1[0][p][q]
+	if(waveexists(density2))
+		slice += density2[0][p][q]
+	endif
+	if(waveexists(density3))
+		slice += density3[0][p][q]
+	endif
 	setscale /i x, 0,dimsize(m,1)*5,slice
 	setscale /i y, 0,dimsize(m,1)*5,slice
 	
@@ -4320,23 +4206,36 @@ function doalignmentmap(folder,[addtolayout])
 	multithread ycomp = m[0][xloc/5][yloc/5][1]
 	multithread zcomp = m[0][xloc/5][yloc/5][2]
 	multithread arrowsyay[][1] = atan(zcomp[p]/ycomp[p])
-	multithread arrowsyay[][0] = sqrt(zcomp[p]^2 + ycomp[p]^2) * 5
+	multithread arrowsyay[][0] = sqrt(zcomp[p]^2 + ycomp[p]^2) * 20
+	if(waveexists(m2))
+		multithread xcomp = m2[0][xloc/5][yloc/5][0]
+		multithread ycomp = m2[0][xloc/5][yloc/5][1]
+		multithread zcomp = m2[0][xloc/5][yloc/5][2]
+		multithread arrowsyay2[][1] = atan(zcomp[p]/ycomp[p])
+		multithread arrowsyay2[][0] = sqrt(zcomp[p]^2 + ycomp[p]^2) * 20
+		yloc2 = arrowsyay2[p][0] <4 ? nan : yloc2[p]
+	else
+		arrowsyay2=nan
+	endif
 	//arrowsyay[][0] = arrowsyay[p][0]< 3 &&  sqrt(zcomp[p]^2 + ycomp[p]^2+ xcomp[p]^2)>.5? 3 : arrowsyay[p][0]
 	yloc = arrowsyay[p][0] <4 ? nan : yloc[p]
+	
 	string alignmapname = cleanupname((folder + "_map"),0)
 	dowindow /k $alignmapname
-	Display /k=1/n=$alignmapname/W=(270.6,59.6,518.4,308.6)/K=1 /l /b  yloc vs xloc as "Slice of Alignment"
+	Display /k=1/n=$alignmapname/W=(-1861,-486,-457,918) /l /b  yloc vs xloc as "Slice of Alignment"
+	appendtograph /w=$alignmapname /l /b  yloc2 vs xloc
 	AppendImage/w=$alignmapname /l/b slice
 	//if(rev)
-		ModifyImage/w=$alignmapname slice ctab= {1,0,yellowhot,0}
+		ModifyImage/w=$alignmapname slice ctab= {1,0,grays,0}
 	//else
 	//	ModifyImage/w=alignmentmap slice ctab= {0,1,yellowhot,0}
 	//endif
 	ModifyGraph/w=$alignmapname mode=3,gfSize=12
-	ModifyGraph/w=$alignmapname rgb=(0,0,0)
+	ModifyGraph/w=$alignmapname rgb(yloc2)=(65535,32768,32768),rgb(yloc)=(16385,65535,65535)
 	ModifyGraph/w=$alignmapname msize=0.5,marker=42,tlOffset=-5
 	ModifyGraph/w=$alignmapname mrkThick=0.1,margin(left)=26,margin(bottom)=26
 	ModifyGraph/w=$alignmapname arrowMarker(yloc)={arrowsyay,.75,0,0,1}
+	ModifyGraph/w=$alignmapname arrowMarker(yloc2)={arrowsyay2,.75,0,0,1}
 	ModifyGraph/w=$alignmapname mirror=0,margin(top)=1,margin(right)=1
 	ModifyGraph/w=$alignmapname axOffset(left)=-4.46154,axOffset(bottom)=-0.962963
 	setaxis /w=$alignmapname left 0,min(1000,5*dimsize(m,1))
@@ -4348,7 +4247,9 @@ function doalignmentmap(folder,[addtolayout])
 		appendlayoutobject /F=0 graph $alignmapname
 		dowindow /HIDE=1 $alignmapname
 	endif
-	setdatafolder foldersave
+	if(!stringmatch("Current",folder))
+		setdatafolder foldersave
+	endif
 end
 function scatterimage(folder,en,[addtolayout])
 	string folder
@@ -4384,8 +4285,8 @@ function scatterimage(folder,en,[addtolayout])
 	//make /n=1000 /o $scat1Dname, $Para1Dname, $Perp1Dname
 	wave scatterdisp = $scatname
 	//setscale /i x,.015,1, scat1D, para1D, perp1d
-	setscale /i x,-.35,.35, scatterdisp
-	setscale /i y,-.35,.35, scatterdisp
+	setscale /i x,-1,1, scatterdisp
+	setscale /i y,-1,1, scatterdisp
 	//setscale /i z,260,320,scatter3dsave
 	//setscale /i x,-.5,.5,scatter3dsave
 	//setscale /i y,-.5,.5,scatter3dsave
@@ -4412,7 +4313,7 @@ function scatterimage(folder,en,[addtolayout])
 	dowindow /k $sgname
 	display /W=(887,57,1623,553)/n=$sgname /k=1 para1D, perp1D, scat1d as (folder + " " + num2str(en) + " eV 1D Scattering")
 	SetAxis /w=$sgname /A=2 left //0.00001,50
-	SetAxis /w=$sgname bottom 0.02,0.4
+	SetAxis /w=$sgname bottom 0.02,1
 	ModifyGraph /w=$sgname mode($para1Dname)=7,useNegPat($para1Dname)=1,toMode($para1Dname)=1,hbFill($para1Dname)=2,hBarNegFill($para1Dname)=2,rgb($para1Dname)=(0,0,65535)
 	ModifyGraph /w=$sgname rgb($scat1dname)=(0,0,0),lsize($para1Dname)=0,lsize($perp1Dname)=0,lsize($scat1dname)=2,log=1
 	
@@ -4424,6 +4325,8 @@ function scatterimage(folder,en,[addtolayout])
 	dowindow /k $svname
 	display /k=1 /n=$svname /W=(40,45,486,479) as (folder + " " + num2str(en) + " eV 2D Scattering")
 	appendimage /w=$svname scatterdisp
+	SetAxis /w=$svname left -0.4,0.4
+	SetAxis /w=$svname bottom -0.4,0.4
 	ModifyImage /w=$svname $scatname ctab= {.0001,5,Terrain,0},log=1
 	ModifyGraph /w=$svname height={Plan,1,left,bottom}
 	//ColorScale/w=$svname /C/N=text0/A=RC/X=0.00/Y=0.00 log=1,image=$scatname
