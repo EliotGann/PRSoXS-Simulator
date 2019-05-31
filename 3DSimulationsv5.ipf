@@ -2722,7 +2722,7 @@ function /s variables_lamella()
 	variables = variables + "Material 2 in amorphous region [%},SetVariable,0;" 		//		  13
 	variables = variables + "Test threshold for Edge finding [%],SetVariable,50;" 	//		  14
 	variables = variables + "Lamella Edge Density [%],SetVariable,90;" 					//		  15
-	variables = variables + "swap fringe/amorph alignment [0 1],SetVariable,90;" 	//		  16
+	variables = variables + "swap fringe/amorph alignment [0 1],SetVariable,0;" 	//		  16
 	return variables
 end
 function /s special_lamella()
@@ -3139,8 +3139,18 @@ function model3D_lamella(s3d)
 		imageedgedetection /P=(j) /M=1 frei alignmagext
 		wave M_ImageEdges
 		M_ImageEdges = M_ImageEdges==255 ? 0 :1
-		imagefilter/o /n=(max(3,amorphAlignWid)) gauss3D M_imageedges
-		unalignmagext[][][j] *=min(1,abs(amorphalignment)*M_imageedges[p][q]) // unalignmagext is the alignment within the unaligned portion
+		
+		if(swapfringe)
+			duplicate /free M_imageedges, tempedges
+			imagefilter/o /n=(max(13,amorphAlignWid+8)) gauss3D M_imageedges
+			imagefilter/o /n=(max(5,amorphAlignWid)) gauss3D tempedges
+			unalignmagext[][][j] *=min(1,max(0,abs(amorphalignment)*(M_imageedges[p][q])-20*tempedges[p][q])) // unalignmagext is the alignment within the unaligned portion
+			
+		
+		else
+			imagefilter/o /n=(max(3,amorphAlignWid)) gauss3D M_imageedges
+			unalignmagext[][][j] *=min(1,abs(amorphalignment)*M_imageedges[p][q]) // unalignmagext is the alignment within the unaligned portion
+		endif
 	endfor
 	duplicate/o alignx, palignx, paligny, palignz // the 90 degree rotated alignment vectors(for edge alignment)
 	if(amorphalignment<0)
@@ -3164,9 +3174,9 @@ function model3D_lamella(s3d)
 	
 	duplicate/o alignmag, unalignmag
 	unalignmag = unalignmagext[p+.4*dimsize(alignmag,0)][q+.4*dimsize(alignmag,1)][r]
-	if(swapfringe)
-		unalignmag = 1-unalignmag - alignmag
-	endif
+	//if(swapfringe)
+	//	unalignmag = 1-unalignmag - alignmag
+	//endif
 	
 	//interlamella alignment (uses amorphalignment and amorphAlignWid)
 	
