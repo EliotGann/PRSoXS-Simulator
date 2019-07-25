@@ -887,7 +887,7 @@ function model3D_Spheres2(s3d)
 	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave
 	if(s3d.movie)
 		Execute("Spheres3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
-		Execute("exportgizmo wave as \"testimage\";Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
+		Execute("exportgizmo wave=\"testimage\"  ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
 	endif
 	setscale /i x, -thickness/2, thickness/2, mat, exmat,xwave, ywave, zwave
 	setscale /i y, -s3d.num/2, s3d.num/2, mat, exmat,xwave, ywave, zwave
@@ -945,7 +945,7 @@ function model3D_Spheres2(s3d)
 		if(s3d.movie)
 			execute("ModifyGizmo /n=Spheres3D update=2")
 			doupdate
-			Execute "exportgizmo wave as \"testimage\""
+			Execute "exportgizmo wave=\"testimage\"   "
 			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
 			doupdate
 			savepict /p=_PictGallery_ /E=-5 /N=Spinoidal3DLayout /o as "Frame3D"
@@ -1805,7 +1805,7 @@ function spinoidalLB3Dn(ndim, num,epsilon, thickness,texp,t0,[movie])
 			duplicate/o realu, realudisp
 		endif
 		Execute("Spin3Ddisp(" +num2str(sizeofdisplay)+", \""+getwavesdatafolder(realudisp,2)+"\")")
-		Execute("exportgizmo wave as \"testimage\";Spinoidal3DLayout_2();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
+		Execute("exportgizmo wave=\"testimage\"   ;Spinoidal3DLayout_2();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
 		makespinoidalslices(realu)
 	endif
 	
@@ -1840,7 +1840,7 @@ function spinoidalLB3Dn(ndim, num,epsilon, thickness,texp,t0,[movie])
 			multithread realudisp = realu[p][q][r]
 			execute("ModifyGizmo /n=Spheres3D update=2")
 			doupdate
-			Execute "exportgizmo wave as \"testimage\""
+			Execute "exportgizmo wave=\"testimage\"   "
 			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
 			dowindow /F Spinoidal3DLayout_2
 			doupdate
@@ -2537,6 +2537,7 @@ function /s variables_fibrals()
 	variables = variables + "Minimum Seperation,SetVariable,0.3;"
 	variables = variables + "Minimum Fibral Length,SetVariable,5;"
 	variables = variables + "Maximum Fibral Length,SetVariable,40;"
+	variables = variables + "ShellAlignment,SetVariable,1;"
 	return variables
 end
 function /s special_fibrals()
@@ -2561,9 +2562,10 @@ function model3D_fibrals(s3d)
 	variable minsep = 		str2num(stringfromlist( 8 ,s3d.paramstring,","))
 	variable minlength = 		str2num(stringfromlist( 9 ,s3d.paramstring,","))
 	variable maxlength = 		str2num(stringfromlist( 10 ,s3d.paramstring,","))
+	variable shellalignment = str2num(stringfromlist( 11 ,s3d.paramstring,","))
 	
 	make /n=(thickness*s3d.num^2,3)/o rmat
-	make /o /n=(thickness,s3d.num,s3d.num) mat=0,xwave, ywave, zwave
+	make /o /n=(thickness,s3d.num,s3d.num) mat=0,xwave, ywave, zwave, ammat=0
 	make /n=( thickness,s3d.num,s3d.num,3)/o vecmat=0
 	if(minsep<1)
 		make/B/U /o /n=(thickness,s3d.num,s3d.num,maxsize) exmat =  (p <= t/(1+minsep)) || (q <= t/(1+minsep)) || (r <= t/(1+minsep) ) || (p >= thickness-t/(1+minsep)) || (q >= s3d.num-t/(1+minsep)) || (r >= s3d.num-t/(1+minsep)) ? 0 : 1
@@ -2573,7 +2575,7 @@ function model3D_fibrals(s3d)
 	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave, tempx
 	if(s3d.movie)
 		Execute("Fibrals3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
-		Execute("exportgizmo wave as \"testimage\";Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
+		Execute("exportgizmo wave=\"testimage\"   ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
 	endif
 
 	xwave = x
@@ -2623,7 +2625,15 @@ function model3D_fibrals(s3d)
 		ty=cy
 		tz=cz
 		do
-			vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < radius^2 ? vec[t] : vecmat
+			
+			if(shellalignment>0)
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < radius^2  && ammat[p][q][r]==0? vec[t] : vecmat
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? 0 : vecmat
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? 1 : ammat
+			elseif(shellalignment < 0)
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? vec[t] : vecmat
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]   = (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-1.5)^2 &&  (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 && abs(vecmat[p][q][r][0])+abs(vecmat[p][q][r][1])+abs(vecmat[p][q][r][2])==0? 1 : ammat
+			endif
 			// for micelles change the above line, (right now it's just making the dipole alignment in line with the fibral main axis)
 			// radial, and two materials
 			// need to add another material outer core, and add to exmat, probably with a core shell diameter parameters needed
@@ -2643,7 +2653,15 @@ function model3D_fibrals(s3d)
 		tz=cz
 		length-=1
 		do
-			vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < radius^2 ? vec[t] : vecmat
+			if(shellalignment>0)
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < radius^2  && ammat[p][q][r]==0? vec[t] : vecmat
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? 0 : vecmat
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? 1 : ammat
+			elseif(shellalignment < 0)
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? vec[t] : vecmat
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]   = (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-1.5)^2 &&  (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 && abs(vecmat[p][q][r][0])+abs(vecmat[p][q][r][1])+abs(vecmat[p][q][r][2])==0? 1 : ammat
+			endif
+			
 			exmat[max(tx-radius-maxsize,0),min(tx+radius+maxsize,mx)][max(ty-radius-maxsize,0),min(ty+radius+maxsize,my)][max(tz-radius-maxsize,0),min(tz+radius+maxsize,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius+t)^2 ? 0 : exmat
 			tx -= vec[0]
 			ty -= vec[1]
@@ -2652,12 +2670,12 @@ function model3D_fibrals(s3d)
 			length+=1
 		while( length<maxlength && hit==0 && tx <= mx && ty <= my && tz <= mz && tx>=0 && ty>=0 && tz>=0 )
 
-		mat = sqrt( vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 )
+		mat = sqrt( vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r])
 		imagefilter /n=3 /o gauss3d, mat
 		if(s3d.movie)
 			execute("ModifyGizmo /n=Fibrals3D update=2")
 			doupdate
-			Execute "exportgizmo wave as \"testimage\""
+			Execute "exportgizmo wave=\"testimage\"   "
 			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
 			doupdate
 			savepict /p=_PictGallery_ /E=-5 /N=Spinoidal3DLayout /o as "Frame3D"
@@ -2686,7 +2704,7 @@ function model3D_fibrals(s3d)
 		imagefilter /n=(interpenetration) /o gauss3d, mat
 		vecmat[][][][2] = mat[p][q][r]
 	endif
-	mat = sqrt( vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 )
+	mat = sqrt( vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r])
 	
 	setdatafolder ::
 	variable fibralvol = mean(mat)
@@ -2698,7 +2716,7 @@ function model3D_fibrals(s3d)
 	make /n=(thickness,s3d.num,s3d.num,4) /o m1=0, m2=0
 	wave s3d.m1=m1, s3d.m2=m2
 	s3d.m1[][][][0,2] = vecmat[p][q][r][t]
-	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r])
+	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]- ammat[p][q][r]) + ammat[p][q][r]
 	s3d.m2[][][][3] = (1-rhomatrix) * (1-mat[p][q][r])
 	
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
@@ -3456,7 +3474,7 @@ function model3D_Spheresln(s3d)
 	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave
 	if(s3d.movie)
 		Execute("Spheres3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
-		Execute("exportgizmo wave as \"testimage\";Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
+		Execute("exportgizmo wave=\"testimage\"   ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
 	endif
 	setscale /i x, -thickness/2, thickness/2, mat, exmat,xwave, ywave, zwave
 	setscale /i y, -s3d.num/2, s3d.num/2, mat, exmat,xwave, ywave, zwave
@@ -3533,7 +3551,7 @@ function model3D_Spheresln(s3d)
 		if(s3d.movie)
 			execute("ModifyGizmo /n=Spheres3D update=2")
 			doupdate
-			Execute "exportgizmo wave as \"testimage\""
+			Execute "exportgizmo wave=\"testimage\"   "
 			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
 			doupdate
 			savepict /p=_PictGallery_ /E=-5 /N=Spinoidal3DLayout /o as "Frame3D"
@@ -3625,7 +3643,7 @@ function model3D_Cylsln(s3d)
 	make/B/U /o /n=(s3d.num,s3d.num) tempwave
 	if(s3d.movie)
 		//Execute("Spheres3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
-		//Execute("exportgizmo wave as \"testimage\";Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
+		//Execute("exportgizmo wave=\"testimage\"   ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
 		newimage /k=1 /n=cylimage mat
 	endif
 
@@ -3683,7 +3701,7 @@ function model3D_Cylsln(s3d)
 		if(s3d.movie)
 			//execute("ModifyGizmo /n=Spheres3D update=2")
 			doupdate
-			//Execute "exportgizmo wave as \"testimage\""
+			//Execute "exportgizmo wave=\"testimage\"   "
 			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
 			//doupdate
 			//savepict /p=_PictGallery_ /E=-5 /N=Spinoidal3DLayout /o as "Frame3D"
@@ -3803,7 +3821,7 @@ function model3D_Spheres2ln(s3d)
 	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave
 	if(s3d.movie)
 		Execute("Spheres3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
-		Execute("exportgizmo wave as \"testimage\";Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
+		Execute("exportgizmo wave=\"testimage\"   ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
 	endif
 	setscale /i x, -thickness/2, thickness/2, mat, exmat,xwave, ywave, zwave
 	setscale /i y, -s3d.num/2, s3d.num/2, mat, exmat,xwave, ywave, zwave
@@ -3852,7 +3870,7 @@ function model3D_Spheres2ln(s3d)
 		if(s3d.movie)
 			execute("ModifyGizmo /n=Spheres3D update=2")
 			doupdate
-			Execute "exportgizmo wave as \"testimage\""
+			Execute "exportgizmo wave=\"testimage\"   "
 			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
 			doupdate
 			savepict /p=_PictGallery_ /E=-5 /N=Spinoidal3DLayout /o as "Frame3D"
