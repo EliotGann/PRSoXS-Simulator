@@ -4,89 +4,91 @@
 //#include "fftstuff2"
 //#include "MCAlignment"
 structure ThreeDSystem
+// parameter inputs
+	variable rot // boolean saying if we are rotating the system or not (90 degrees is always included) 
+	variable num // resolution of simulation (in each of the long axes of the film)
+	variable thickness // voxels of thickness along the beam direction
+	variable voxelsize // the size of each pixel in the simulation (in nanometers)
+	variable size // the dominant size of features (ie the radius of the sphere, if we're simulating spheres)
+	variable materialnum // number of materials
+	string paramstring //specific parameters for creating density matricies according to the model
+	string modelname //store the model name somewhere
+	string path // the path to put important things for this calculation
+	string name // name of simulation
+	variable movie // are we doing a movie
+
+// morphology outputs, alignment inputs
+
+	//technically not needed by simulations, but nice to have around for visualizations
+	wave density1 // the density of material 1 output from the morphology module, this will be changed into
+	wave density2 // optional density of material 2 (implies 3 materials)
+	wave density3 // implies 4 materials
+	wave density4 // implies 5 materials
+
+// Inputs for alignment calculations
+	string materialalignmentstring // list of materials alignment (for creating alignment)
+	
+	
+// Morphology or alignment Outputs, Scattering Inputs
+
 	wave m1 //4 dimensional density of material 1 in (x direction, y direction, z direction, unaligned)  sum = relative concentration sum(between -1 - 1 for x, y and z)^2 + unaligned = total material density
 	wave m2 //4 dimensional density of material 2 in (x direction, y direction, z direction, unaligned)  sum = relative concentration sum(between -1 - 1 for x, y and z)^2 + unaligned = total material density
 	wave m3 //4 dimensional density of material 3 in (x direction, y direction, z direction, unaligned)  sum = relative concentration sum(between -1 - 1 for x, y and z)^2 + unaligned = total material density
 	wave m4 //4 dimensional density of material 4 in (x direction, y direction, z direction, unaligned)  sum = relative concentration sum(between -1 - 1 for x, y and z)^2 + unaligned = total material density
 	wave m5 //4 dimensional density of material 5 in (x direction, y direction, z direction, unaligned)  sum = relative concentration sum(between -1 - 1 for x, y and z)^2 + unaligned = total material density
+
+// parameter inputs for scattering
+	string materials // list of materials
+	string efield // two components which add to 1 which indicate the unit direction of the efield in the (ydirection, z direction)
+				// x-ray propogation is always in the x direction
+
+
+
+// Internal Variables
 	wave /t logbook // keep a log of progress in the simulation
-	wave /d/c n //3D complex index of refraction map (depends on energy) // this is now outdated
-				// in the current version of the program, this will be a single complex number for each material which will be set at each energy step, and used in calculations
 	variable progressbar
+	variable timer
+	variable timesofar
+
+// Scattering internal calculations
+
+	wave /d/c n //a single complex number for each material which will be set at each energy step, and used in calculations
 	wave /d /c px // induced polarization in the x direction for real space, x,y,z
 	wave /d /c pxFFT // fourier transform of above, in qx, qy, qz space
 	wave /d /c py // same in y direction
 	wave /d /c pyFFT// fourier transform of above, in qx, qy, qz space
 	wave /d /c pz // same in z direction
 	wave /d /c pzFFT// fourier transform of above, in qx, qy, qz space
-	//wave /d qtensor // the coeffifients of the PFFT which are used to calculate EScat components below // this is calculated one for the simulation
-	// the x,y,z components of qtensor correspond to it's native units of qx, qy, qz
-		//qtensor[][][][0] = - k * (2 * x + y + z) - x * (x + y + z)
-		//qtensor[][][][1] =   k^2 - k * y - y * (x + y + z)
-		//qtensor[][][][2] =   k^2 - k * z - z * (x + y + z)
-		// This is matrix multiplied by ((Pxfft,Pyfft,Pzfft (which are each 3D scalar fields with coordinates in qx, qy, and qz)) producing a 3 component vector field in qx, qy, qz components3d.
-	wave /d /c Escatx, Escaty, Escatz // the result of the above line
-		// Escatx = pxFFT[x][y][z] * qtensor[x][y][z][0]
-		// Escatx = pxFFT[x][y][z] * qtensor[x][y][z][0]
-		// Escatx = pxFFT[x][y][z] * qtensor[x][y][z][0]
-		// the elastic scattering condition is applied to these components (interpolate and magsqr 2D qy, qz components, where qx = sqrt(k^2-qz^2-qy^2)-k)
+	wave /d /c Escatx, Escaty, Escatz // 
 	wave /d EscatSqr // the sum of the magsquared values as described above, before interpolation
-//	wave/d nr  // real component of n // depricated in this version, not useful
-//	wave/d ni  // imaginary component of n // depricated in this version, not useful
-//	wave /d/c np // 2D complex index of refraction projection (or slice) (along x axis) // depricated in this version, not useful
 	
-	wave density1 // the density of material 1 output from the morphology module, this will be changed into
-	wave density2 // optional density of material 2 (implies 3 materials)
-	wave density3 // implies 4 materials
-	wave density4 // implies 5 materials
 	
+
+	
+// scattering outputs for each step
 	wave/d scatter3D // 2d scattering simulation from 3D data
-	//wave/d scatter2D // 2d scattering simulation from projected data // no longer calculating this in the new version
-	
 	wave/d int3D // radially summed intensity
-	// wave/d int2D // radially summed intensity  // no longer calculating this in the new version
 	wave/d int3Dp0 // radially averaged intensity
-	// wave/d int2Dp0 // radially averaged intensity  // no longer calculating this in the new version
 	wave/d int3Dpara // radially summed intensity in direction of electric field
-	// wave/d int2Dpara // radially summed intensity in direction of electric field  // no longer calculating this in the new version
 	wave/d int3Dp0para // radially averaged intensity in direction of electric field
-	// wave/d int2Dp0para // radially averaged intensity in direction of electric field  // no longer calculating this in the new version
 	wave/d int3Dperp // radially summed intensity in direction normal to the electric field
-	// wave/d int2Dperp // radially summed intensity in direction normal to the electric field  // no longer calculating this in the new version
 	wave/d int3Dp0perp // radially averaged intensity in direction normal to the electric field
-	// wave/d int2Dp0perp // radially averaged intensity in direction normal to the electric field  // no longer calculating this in the new version
 	
 	
+// scattering outputs saved (if chosen) and output for all energies
 	wave/d Scatter3DSave // Full 2D Scattering Scattering Pattern Saved vs Energy
-	// wave /d int2DvsEn // two dimensional average intensity vs momentum transfer and energy
 	wave /d int3DvsEn // same but for the 3D calculated data
-	// wave /d ratio2DvsEn // the ratio of parallel to perpindicular scattering intensity vs Q and Energy
 	wave /d ratio3DvsEn // same but for the 3D calculated data
 	wave /d Para3DvsEn // same but for the 3D calculated data
 	wave /d Perp3DvsEn // same but for the 3D calculated data
 	
+// internal scattering variables
 	variable step // current energy step (integer for storing data)
 	variable en // current energy = 1239.84197 / wavelength =  ( 1239.84197/(2*pi)) * wavevector
 	variable wavelength // current wavelength = 1239.84197 / energy = 2*pi / wavevector (in nanometers)
 	variable k // current wavevector magnitude (2*pi / wavelength) = (2 * pi / 1239.84197 ) * Energy (in inverse nanometers)
+					// current code has the X-rays propotaging in the x direction
 	
-	variable rot // boolean saying if we are rotating the system or not (90 degrees is always included) 
-	variable num // resolution of simulation (in each of three dimensions)
-	variable thickness
-	variable voxelsize // the size of each pixel in the simulation (in nanometers)
-	variable size // the dominant size of features (ie the radius of the sphere, if we're simulating spheres)
-	variable materialnum
-	string paramstring //specific parameters for creating density matricies according to the model
-	string modelname
-	string materials // list of materials
-	string efield // two components which add to 1 which indicate the unit direction of the efield in the (ydirection, z direction)
-				// x-ray propogation is always in the x direction
-	string materialalignmentstring // list of list 
-	string path // the path to put important things for this calculation
-	string name // name of simulation
-	variable movie
-	variable timer
-	variable timesofar
 endstructure
 
 function addtologbook(s3d,lognote)
@@ -145,23 +147,14 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	// energynum - the number of energysteps
 //simulation options (optional)
 	//movie = make a movie of the process?
+	// save3d - save the full scattering pattern at each energy
+	// moviepath - avoid a popup if you supply a valid path for the movie
+	// enwave - overwrites energy min, max and num and just calculated the energy values in this wave, if it exists
+	// boolean to rotate the system - greatly increases the quality o he calculation, can be done in he fuure by roating the efield, rather than the elaborate way it is done now
 	string modelname,paramstring,materiallist,materialalignmentstring,efield, moviepath
 	variable sizescale, resolution, energymin,energymax,energynum, movie, save3d, thickness,voxelsize, rotatesys
 	wave/z enwave // this will override the energy start, step etc, with arbitrary energy steps
-//	print modelname
-//	print voxelsize
-//	print sizescale
-//	print resolution
-//	print thickness
-//	print paramstring
-//	print materiallist
-//	print materialalignmentstring
-//	print efield
-//	print energymin
-//	print energymax
-//	print energynum
-//	print "Movie="+num2str(movie)
-//	print "Save3D="+num2str(save3d)
+
 		
 	struct ThreeDSystem s3D
 	variable result, timer1
@@ -212,7 +205,6 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	addtologbook(s3d,"Material Slignment String: " + materialalignmentstring)
 	
 	string cmdstr = "Model3D("
-	//(modelname,voxelsize,sizescale,resolution,thickness,paramstring,materiallist,materialalignmentstring,efield,energymin,energymax,energynum[movie, save3d,moviepath,enwave])
 	cmdstr += "\"" + modelname + "\","
 	cmdstr += num2str(voxelsize) + ","
 	cmdstr += num2str(sizescale) + ","
@@ -300,19 +292,6 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		endif
 	endif
 	
-//	if(stringmatch("Spheres2",modelname))
-//		print "Creating system of aligned spheres"
-//		model3D_Spheres2(s3d)
-//	elseif(stringmatch("existing",modelname))
-//		print "Using Existing Density Waves"
-//		model3D_Existing(s3d)
-//	elseif(stringmatch("spinoidal",modelname))
-//		print "Creating a spinoidal depomposition system"
-//		model3D_spinoidal(s3d)
-//	else
-//		print "no recognized model could be created"
-//		return -1
-//	endif 
 	
 	if(exists("model3d_"+modelname)==6)
 		updatephase(s3d,"Building Morphology")
@@ -323,12 +302,13 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		return -1
 	endif
 	variable alignmentincluded
-	if(exists("special_"+modelname)==6)
+	if(exists("special_"+modelname)==6) // this is a unique function which if exists, will give some extra information about the model, in this case wether alignment is created
+												// in the model, or it needs to be calculated - with modern models it is almos always generated within the model creation process
 		funcref special_existing specfunc=$("special_"+modelname)
 		alignmentincluded = stringmatch(specfunc(),"*IncludesAlignment*")
 	endif
 	
-	//calculate alignment of system
+	//calculate alignment of system if needed
 	if( stringmatch(materialalignmentstring,"none") )
 		//Print "Time : "+time2str(s3d.timesofar) +"  -   Loading Existing material Alignment"
 		
@@ -355,6 +335,74 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		addtologbook(s3d,"Check of system density checks out")
 		//Print "Time : "+time2str(s3d.timesofar) +"  -  Check of system density checks out"
 	endif
+	
+	
+	
+	
+	
+	// At this point we have all the values that we need.  we could save the model now to disk, or load a model from disk at this point
+	// data to save to model file
+	// m1-m5 (if they exist)
+		// first three dimensions are the aligned component - should go into mat_(1-5)_alignment vectors field
+		// fourth dimension is the unaligned component should go into mat_(1-5)_unaligned scalar field
+
+	variable h5file, groupid
+	HDF5CreateFile /O h5file as replacestring("mov",replacestring("mp4",moviepath,"hd5"),"hd5")
+	HDF5CreateGroup h5file , "VecMorphology" , groupID
+	
+	newdatafolder /o/s hd5output
+	make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
+	hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_1_alignment, groupiD
+	make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_unaligned = s3d.m1[p][q][r][3]
+	hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,1024,1024} Mat_1_unaligned, groupiD
+	if(waveexists(s3d.m2))
+		make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][t]
+		make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2)) /d Mat_2_unaligned = s3d.m2[p][q][r][3]
+		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_2_alignment, groupiD
+		hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,1024,1024} Mat_2_unaligned, groupiD
+		if(waveexists(s3d.m3))
+			make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][t]
+			make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2)) /d Mat_3_unaligned = s3d.m3[p][q][r][3]
+			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_3_alignment, groupiD
+			hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,1024,1024} Mat_3_unaligned, groupiD
+			if(waveexists(s3d.m4))
+				make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][t]
+				make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2)) /d Mat_4_unaligned = s3d.m4[p][q][r][3]
+				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_4_alignment, groupiD
+				hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,1024,1024} Mat_4_unaligned, groupiD
+				if(waveexists(s3d.m5))
+					make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][t]
+					make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2)) /d Mat_5_unaligned = s3d.m5[p][q][r][3]
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_5_alignment, groupiD
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64} /MAXD={256,1024,1024} Mat_5_unaligned, groupiD
+				endif
+			endif
+		endif
+	endif
+	
+	newdatafolder /o/s IgorParams
+	
+	// parameters to save to parameter file 																				(*unique to Igor)
+	variable /g igorrotation =  s3d.rot // boolean saying if we are rotating the system or not (90 degrees is always included) 		* - this should be universal
+	variable /g igornum =  s3d.num // resolution of simulation (in each of the long axes of the film) 								* - the data itself should have this
+	variable /g igorthickness =  s3d.thickness // voxels of thickness along the beam direction 												* - the data itself should have this
+	variable /g igorvoxelsize =  s3d.voxelsize // the size of each pixel in the simulation (in nanometers) 									* - can be changed trivially, it is just a scaling parameter
+	variable /g igormaterialnum =  s3d.materialnum // number of materials																				* - can be read from materials list
+	string /g igorparamstring =  s3d.paramstring //specific parameters for creating density matricies according to the model				* - used for morphology creation
+	string /g igormodelname =  s3d.modelname //store the model name somewhere																	* - used for morphology creation
+	string /g igorpath =  s3d.path // the path to put important things for this calculation	
+	string /g igorname =  s3d.name // name of simulation
+	variable /g igormovie =  s3d.movie // are we doing a movie																					* - for visualization and some feedback
+	string /g igormaterials =  s3d.materials // list of materials
+	string /g igorefield =  s3d.efield // direction of efield - in the future, if combined with rotation, this doesn't need to be defined, maybe - all orientations will be calculated
+	setdatafolder ::
+	
+	
+	HDF5CreateGroup h5file , "IgorParameters" , groupID
+	HDF5SaveGroup /L=7 /O /R IgorParams , h5file , "IgorParameters" 
+	HDF5CloseFile h5file
+	
+	setdatafolder ::
 	
 	// make waves to store integrations and ratios
 	make/d/o/n=(floor(s3d.num/sqrt(2)),energynum) int3DvsEn=0,ratio3DvsEn=0, para3dvsen, perp3dvsen
