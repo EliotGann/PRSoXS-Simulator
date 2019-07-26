@@ -348,7 +348,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 
 	variable h5file, groupid
 	HDF5CreateFile /O h5file as replacestring("mov",replacestring("mp4",moviepath,"hd5"),"hd5")
-	HDF5CreateGroup h5file , "VecMorphology" , groupID
+	HDF5CreateGroup h5file , "vector_morphology" , groupID
 	
 	newdatafolder /o/s hd5output
 	make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
@@ -380,7 +380,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		endif
 	endif
 	
-	newdatafolder /o/s IgorParams
+	newdatafolder /o/s igor_paramaters
 	
 	// parameters to save to parameter file 																				(*unique to Igor)
 	variable /g igorrotation =  s3d.rot // boolean saying if we are rotating the system or not (90 degrees is always included) 		* - this should be universal
@@ -396,13 +396,24 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	string /g igormaterials =  s3d.materials // list of materials
 	string /g igorefield =  s3d.efield // direction of efield - in the future, if combined with rotation, this doesn't need to be defined, maybe - all orientations will be calculated
 	setdatafolder ::
+	newdatafolder /o/s morphology_variables
+	make /o /n=3 film_normal = {1,0,0}
+	string /g morphology_creator = "EG_"+s3d.modelname
+	string /g version = secs2date(datetime,-2)
+	string /g creation_date = secs2date(datetime,-2) +" " + secs2time(datetime,1)
+	string /g name = s3d.name
+	setdatafolder ::
 	
 	
-	HDF5CreateGroup h5file , "IgorParameters" , groupID
-	HDF5SaveGroup /L=7 /O /R IgorParams , h5file , "IgorParameters" 
+	HDF5CreateGroup h5file , "igor_parameters" , groupID
+	HDF5SaveGroup /L=7 /O /R igor_paramaters , h5file , "igor_parameters" 
+	HDF5CreateGroup h5file , "morphology_variables" , groupID
+	HDF5SaveGroup /L=7 /O /R morphology_variables , h5file , "morphology_variables" 
 	HDF5CloseFile h5file
 	
 	setdatafolder ::
+	
+	killdatafolder /z hd5output
 	
 	// make waves to store integrations and ratios
 	make/d/o/n=(floor(s3d.num/sqrt(2)),energynum) int3DvsEn=0,ratio3DvsEn=0, para3dvsen, perp3dvsen
