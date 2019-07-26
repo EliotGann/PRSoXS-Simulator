@@ -4279,10 +4279,13 @@ function doalignmentmap(folder,[addtolayout])
 		setdatafolder foldersave
 	endif
 end
-function scatterimage(folder,en,[addtolayout])
+function scatterimage(folder,en,[addtolayout,qpwr,append2graph])
 	string folder
 	variable en
 	variable addtolayout
+	variable qpwr, append2graph
+	qpwr = paramisdefault(qpwr)? 2:qpwr
+	append2graph = paramisdefault(append2graph)? 0:append2graph
 	addtolayout = paramisdefault(addtolayout) ? 0 : addtolayout
 	string foldersave = getdatafolder(1)
 	setdatafolder root:Packages:ScatterSim3D:$folder
@@ -4333,23 +4336,33 @@ function scatterimage(folder,en,[addtolayout])
 	wave scat1D = $scat1dname
 	wave para1D = $para1Dname
 	wave perp1d = $perp1Dname
-	scat1D *=x^2
-	para1D *=x^2
-	perp1D *=x^2
+	scat1D *=x^qpwr
+	para1D *=x^qpwr
+	perp1D *=x^qpwr
 	string svname = cleanupname(folder+num2str(en),0)
 	string sgname = cleanupname(folder+"1D"+num2str(en),0)
-	dowindow /k $sgname
-	display /W=(887,57,1623,553)/n=$sgname /k=1 para1D, perp1D, scat1d as (folder + " " + num2str(en) + " eV 1D Scattering")
-	SetAxis /w=$sgname /A=2 left //0.00001,50
-	SetAxis /w=$sgname bottom 0.02,1
-	ModifyGraph /w=$sgname mode($para1Dname)=7,useNegPat($para1Dname)=1,toMode($para1Dname)=1,hbFill($para1Dname)=2,hBarNegFill($para1Dname)=2,rgb($para1Dname)=(0,0,65535)
-	ModifyGraph /w=$sgname rgb($scat1dname)=(0,0,0),lsize($para1Dname)=0,lsize($perp1Dname)=0,lsize($scat1dname)=2,log=1
+	if(append2graph)
+		appendtograph para1D /tn=$(folder + para1Dname)
+		appendtograph perp1D /tn=$(folder + perp1Dname)
+		appendtograph scat1d /tn=$(folder + scat1dname)
+		
+		ModifyGraph mode($(folder + para1Dname))=7,useNegPat($(folder + para1Dname))=1,toMode($(folder + para1Dname))=1,hbFill($(folder + para1Dname))=2,hBarNegFill($(folder + para1Dname))=2,rgb($(folder + para1Dname))=(0,0,65535)
+		ModifyGraph rgb($(folder + scat1dname))=(0,0,0),lsize($(folder + para1Dname))=0,lsize($(folder + perp1Dname))=0,lsize($(folder + scat1dname))=2,log=1
+		ModifyGraph grid=1,tick=2,gfSize=20,axThick=2,standoff=0,gridStyle=3,gridRGB=(43690,43690,43690),useNegRGB($(folder + para1Dname))=1,usePlusRGB($(folder + para1Dname))=1,plusRGB=(65535,0,0),negRGB($(folder + para1Dname))=(3,1,52428)
+	
+	else
+		dowindow /k $sgname
+		display /W=(887,57,1623,553)/n=$sgname /k=1 para1D, perp1D, scat1d as (folder + " " + num2str(en) + " eV 1D Scattering")
+		SetAxis /w=$sgname /A=2 left //0.00001,50
+		SetAxis /w=$sgname bottom 0.02,1
+		ModifyGraph /w=$sgname mode($para1Dname)=7,useNegPat($para1Dname)=1,toMode($para1Dname)=1,hbFill($para1Dname)=2,hBarNegFill($para1Dname)=2,rgb($para1Dname)=(0,0,65535)
+		ModifyGraph /w=$sgname rgb($scat1dname)=(0,0,0),lsize($para1Dname)=0,lsize($perp1Dname)=0,lsize($scat1dname)=2,log=1
 	
 	//Label /w=$sgname left "Scattering Intensity";DelayUpdate
 	//Label /w=$sgname bottom "Momentum Transfer Q [nm\\S-1\\M]"
-	ModifyGraph /w=$sgname grid=1,tick=2,gfSize=20,axThick=2,standoff=0,gridStyle=3,gridRGB=(43690,43690,43690),useNegRGB($para1Dname)=1,usePlusRGB($para1Dname)=1,plusRGB=(65535,0,0),negRGB($para1Dname)=(3,1,52428)
+		ModifyGraph /w=$sgname grid=1,tick=2,gfSize=20,axThick=2,standoff=0,gridStyle=3,gridRGB=(43690,43690,43690),useNegRGB($para1Dname)=1,usePlusRGB($para1Dname)=1,plusRGB=(65535,0,0),negRGB($para1Dname)=(3,1,52428)
 	//Legend /w=$sgname/C/N=text0/J/F=0/B=1 "\\s("+scat1dname+") Azimuthal Integration\r\\s("+para1Dname+") Positive Anisotropy"
-	
+	endif
 	dowindow /k $svname
 	display /k=1 /n=$svname /W=(40,45,486,479) as (folder + " " + num2str(en) + " eV 2D Scattering")
 	appendimage /w=$svname scatterdisp
@@ -4362,7 +4375,7 @@ function scatterimage(folder,en,[addtolayout])
 	TextBox/w=$svname/C/N=text1/F=0/A=LT/X=10.00/Y=10.00/B=1/G=(0,0,0) "\\F'Arial Black'\\Z20"+num2str(en)+" eV"
 	setdatafolder foldersave
 	
-	if(addtolayout)
+	if(addtolayout && !append2graph)
 		appendlayoutobject /F=0 graph $svname
 		appendlayoutobject /F=0 graph $sgname
 		dowindow /HIDE=1 $svname
