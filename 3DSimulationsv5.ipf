@@ -398,6 +398,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	setdatafolder ::
 	newdatafolder /o/s morphology_variables
 	make /o /n=3 film_normal = {1,0,0}
+	variable /g voxel_size_nm = s3d.voxelsize
 	string /g morphology_creator = "EG_"+s3d.modelname
 	string /g version = secs2date(datetime,-2)
 	string /g creation_date = secs2date(datetime,-2) +" " + secs2time(datetime,1)
