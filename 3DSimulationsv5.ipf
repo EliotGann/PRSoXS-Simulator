@@ -256,7 +256,8 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	enwavedisp[0]=enwave[0]-.1
 	
 	
-	
+	 // set up the display and movie output
+	 
 	dowindow /k simulation_layout
 	execute("Simulation_Layout()")
 	if(s3d.movie)
@@ -292,6 +293,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		endif
 	endif
 	
+	// try to call the chosen morphology creator
 	
 	if(exists("model3d_"+modelname)==6)
 		updatephase(s3d,"Building Morphology")
@@ -308,7 +310,8 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		alignmentincluded = stringmatch(specfunc(),"*IncludesAlignment*")
 	endif
 	
-	//calculate alignment of system if needed
+	//calculate alignment of system if needed - some morphologies already do this (code above checkes for this)
+	
 	if( stringmatch(materialalignmentstring,"none") )
 		//Print "Time : "+time2str(s3d.timesofar) +"  -   Loading Existing material Alignment"
 		
@@ -323,6 +326,9 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		Align3Dsystem(s3d)
 	endif
 	addtologbook(s3d,"Alignment Loaded - Checking System Density for consistancy")
+	
+	// check the m1-m5 matrices to make sure they make sense
+	
 	updatephase(s3d,"Checking Morphology and Alignment")
 	if(sum3dsystem(s3d)<0)
 		addtologbook(s3d,"warning : System Creation failed to conserve density throughout system")
@@ -416,7 +422,10 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	
 	killdatafolder /z hd5output
 	
+	
+	
 	// make waves to store integrations and ratios
+	
 	make/d/o/n=(floor(s3d.num/sqrt(2)),energynum) int3DvsEn=0,ratio3DvsEn=0, para3dvsen, perp3dvsen
 	make/d/o/n=(s3d.num,s3d.num,energynum) scatter3DSave
 	wave s3d.scatter3DSave=scatter3DSave, s3d.int3DvsEn=int3DvsEn, s3d.ratio3DvsEn=ratio3DvsEn, s3d.para3dvsen=para3dvsen, s3d.perp3dvsen=perp3dvsen
@@ -436,6 +445,10 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	variable offsetx, offsety // offset for rotation to get rid of speckle
 	s3d.step=0
 	updatephase(s3d,"Calculating Scattering")
+	
+	
+	// expand the M matrices (this will allow rotation, although it assumes periodic type boundary conditions, otherwise this will add scattering artifacts.)
+	
 	
 	make /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1)*1.8,dimsize(s3d.m1,2)*1.8,dimsize(s3d.m1,3))/o m1ext = s3d.m1[p][mod(q+.9*dimsize(s3d.m1,1),dimsize(s3d.m1,1))][mod(r+.9*dimsize(s3d.m1,2),dimsize(s3d.m1,2))][s]
 	duplicate/o s3d.m1, m1save
@@ -457,10 +470,10 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	endif
 	
 	
-	createsimlayout()
+	createsimlayout() // open the live display for the scattering simulation
 	
 	
-	for( j=0; j <dimsize(enwave,0) ; j+=1)
+	for( j=0; j <dimsize(enwave,0) ; j+=1) // main loop through energies
 		en=enwave[j]
 		//s3d.progressbar = 100*(en-energymin) / (energymax-energymin)
 		s3d.progressbar = 100*(j) / (dimsize(enwave,0))
@@ -473,8 +486,12 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		
 		
 		// loop through polarization and scattering calculations as the system is rotated
+		//  this assumes that the enlarged systems we have created were from periodic boundary conditions.  Unfortunately once rotated, the boundaries cannot maintain periodicity, and will introduce some artifacts\
+		//  this is far outweighed by the benefit particulary when looking at anisotropy
+		// For Future development****  instead of rotating the system, rotate the efield, and then rotate the scattering pattern back.  it is very important that sums are only made with efield pointing in the same direction
+		//   otherwise all anisotropy will be removed (simulating circular polarization)
 		for(angle=0;angle<180;angle+=anglestep)
-			offsetx = 0//floor(enoise(dimsize(s3d.m1,1)/10))
+			offsetx = 0//floor(enoise(dimsize(s3d.m1,1)/10)) // this was rotating and offsetting the center randomly, I found that the offsetting didn't matter
 			offsety = 0//floor(enoise(dimsize(s3d.m1,2)/10))
 			
 			sysrotate(m1ext,s3d.m1,angle,offsetx,offsety)
@@ -491,7 +508,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 				sysrotate(m5ext,s3d.m5,angle,offsetx,offsety)
 			endif
 			
-			result = CalculatePolarizationWave(s3d)
+			result = CalculatePolarizationWave(s3d) // This is the main calculation, taking efield and m matrices with npara and nperp and producing the induced polarization within each voxel
 			if(result<0)
 				addtologbook(s3d,"quitting because of critical errors in calculating polarization")
 				//print "quitting because of critical errors in calculating polarization"
@@ -503,7 +520,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	
 		//	addtologbook(s3d,"Angle="+num2str(angle))
 			//Print "Time : "+time2str(s3d.timesofar) +"  -  Creating 3D Scattering Pattern"
-			Calculate3DScatter(s3d)
+			Calculate3DScatter(s3d) // this projects the induced polarization to the far field, simulating the scattering which emits from this polarization field
 			if(angle==0)
 				duplicate/free s3d.scatter3d, scatter3dsum
 			else
@@ -511,7 +528,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 			endif
 			if(angle/10 == round(angle/10) && angle + anglestep < 180)
 				if(angle>0)
-					s3d.scatter3D = scatter3Dsum/(angle/anglestep)
+					s3d.scatter3D = scatter3Dsum/(angle/anglestep) // add up the scattering from different rotations
 					
 				else
 					RadialIntegratesystem(s3d)
@@ -611,7 +628,7 @@ function createsimlayout()
 	doupdate
 end
 
-function align3dsystem(s3d)
+function align3dsystem(s3d) // given a morphology of only scalar density, produce an alignment field
 	struct ThreeDSystem &s3d
 	string matstr = s3d.materialalignmentstring
 	string mat,alignment,alignmentwidth, alignmentstrength
@@ -738,7 +755,7 @@ end
 
 
 
-function Calculate3DScatter(s3d)
+function Calculate3DScatter(s3d) // turn the polarization fields into scattering fields (real space to fourier space)
 	struct ThreeDSystem &s3d
 	variable thicknum = dimsize(s3d.px,0) , num = s3d.num
 	if(num/2 != round(num/2) )
@@ -748,6 +765,9 @@ function Calculate3DScatter(s3d)
 		thicknum +=1
 	endif
 	wave px = s3d.px, py=s3d.py, pz=s3d.pz
+	
+	// each element is fourier transformed seperatly, the different components only add incoherently
+	
 	FFT /WINF=Hanning /pad={1*thicknum,1*num,1*num} /Dest=pxfft px
 	FFT /WINF=Hanning /pad={1*thicknum,1*num,1*num} /Dest=pyfft py
 	FFT /WINF=Hanning /pad={1*thicknum,1*num,1*num} /Dest=pzfft pz
@@ -758,24 +778,16 @@ function Calculate3DScatter(s3d)
 	setscale /i x, -pi/s3d.voxelsize, pi/s3d.voxelsize, pxfft, pyfft, pzfft, EscatSqr // changing from math units (1/voxelsize) to physics units (2pi/voxelsize)
 	setscale /i y, -pi/s3d.voxelsize, pi/s3d.voxelsize, pxfft, pyfft, pzfft, EscatSqr
 	setscale /i z, -pi/s3d.voxelsize, pi/s3d.voxelsize, pxfft, pyfft, pzfft, EscatSqr // all three dimensions have the same range.  The x dimension may have a lower number of pixels, but they cover the same range
-//	s3d.qtensor[][][][0] = x * (2 * s3d.k + x)
-//	s3d.qtensor[][][][1] = y * (s3d.k + x)
-//	s3d.qtensor[][][][2] = z * (s3d.k + x)
-//	s3d.qtensor[][][][3] = y * (s3d.k + x)
-//	s3d.qtensor[][][][4] = y^2 - s3d.k^2
-//	s3d.qtensor[][][][5] = y * z
-//	s3d.qtensor[][][][6] = z * (s3d.k + x)
-//	s3d.qtensor[][][][7] = y * z
-//	s3d.qtensor[][][][8] = z^2 - s3d.k^2
+
 	variable k = s3d.k
-	multithread EscatSqr = magsqr(x * (2 * k + x) * pxfft[p][q][r] + y * (k + x) * pyfft[p][q][r] + z * (k + x) * pzfft[p][q][r])
+	multithread EscatSqr = magsqr(x * (2 * k + x) * pxfft[p][q][r] + y * (k + x) * pyfft[p][q][r] + z * (k + x) * pzfft[p][q][r]) // Equation 8 from paper (qx -> -qx ends up equivalent somehow - checked with mathematica)
 	multithread EscatSqr += magsqr(y * (k + x)* pxfft[p][q][r]+ (y^2 - k^2) * pyfft[p][q][r] + y * z * pzfft[p][q][r])
 	multithread EscatSqr += magsqr(z * (k + x)* pxfft[p][q][r]+ y * z* pyfft[p][q][r]+ (z^2 - k^2 ) * pzfft[p][q][r])
 	make /d/n=(s3d.num,s3d.num)/o s3d.scatter3D // this will hold the final scattering result
 	wave scatter3d = s3d.scatter3d
 	setscale /i x, -pi/s3d.voxelsize, pi/s3d.voxelsize, s3d.scatter3D // changing from math units (1/voxelsize) to physics units (2pi/voxelsize)
 	setscale /i y, -pi/s3d.voxelsize, pi/s3d.voxelsize, s3d.scatter3D
-	multithread scatter3D = k^2 > x^2 + y^2 ? interp3d(EscatSqr,-k + sqrt(k^2 - x^2 -y^2),x,y) : nan
+	multithread scatter3D = k^2 > x^2 + y^2 ? interp3d(EscatSqr,-k + sqrt(k^2 - x^2 -y^2),x,y) : nan // projection to the EWalds sphere
 	
 	duplicate /o s3d.EscatSqr, pxreal
 	//pxreal = magsqr(s3d.pxfft)
@@ -806,7 +818,7 @@ function CalculatePolarizationWave(s3d)
 		return -1
 	endif
 	
-	for(i=0;i<matnum;i+=1)
+	for(i=0;i<matnum;i+=1) // loop through materials
 		material = stringfromlist(i,s3d.materials,",")
 		//if there exist both para and perp optical constants load the corresponding values for that energy, otherwise throw warning and load same OC for both
 		if(ocsexist(material)==2)
@@ -842,14 +854,19 @@ function CalculatePolarizationWave(s3d)
 			print " Error - invalid number of materials specified"
 			return -1
 		endif
-		multithread px[][][] +=   ( (npara^2 - nperp^2)/(4*pi) ) * m[p][q][r][2]* m[p][q][r][0]
-		multithread py[][][] +=   ( (npara^2 - nperp^2)/(4*pi) ) * m[p][q][r][2]* m[p][q][r][1]
-		multithread pz[][][] -=   (m[p][q][r][0]^2 + m[p][q][r][1]^2 + m[p][q][r][2]^2 + m[p][q][r][3])/(4*pi) // the overall material (phi)
-		multithread pz[][][] +=   m[p][q][r][3]/(36*pi) * (npara + 2*nperp)^2 // second term (unaligned portion)
-		multithread pz[][][] +=   npara^2 * m[p][q][r][2]^2 /(4*pi)
-		multithread pz[][][] +=   nperp^2 * (m[p][q][r][0]^2 + m[p][q][r][1]^2) /(4*pi)
+		multithread px[][][] +=   ( (npara^2 - nperp^2)/(4*pi) ) * m[p][q][r][2]* m[p][q][r][0] // equation 5 from paper
+		multithread py[][][] +=   ( (npara^2 - nperp^2)/(4*pi) ) * m[p][q][r][2]* m[p][q][r][1] // equation 5 from paper
+		
+				// following lines are equation 4 from paper
+		multithread pz[][][] -=   (m[p][q][r][0]^2 + m[p][q][r][1]^2 + m[p][q][r][2]^2 + m[p][q][r][3])/(4*pi) // the overall material (phi) fourth term
+		multithread pz[][][] +=   m[p][q][r][3]/(36*pi) * (npara + 2*nperp)^2 // first term (unaligned portion)
+		multithread pz[][][] +=   npara^2 * m[p][q][r][2]^2 /(4*pi) // term 2
+		multithread pz[][][] +=   nperp^2 * (m[p][q][r][0]^2 + m[p][q][r][1]^2) /(4*pi) //term 3
 		//multithread pz[][][] +=   (m[p][q][r][0]^2 + m[p][q][r][1]^2 + m[p][q][r][2]^2 + m[p][q][r][3])/(4*pi) +  (m[p][q][r][3]/(12*pi)) * (npara^2 + 2*nperp^2) + (npara^2 * m[p][q][r][2]^2 + nperp^2 * (m[p][q][r][0]^2 +m[p][q][r][1]^2) )/(4*pi)
 	endfor
+	
+	
+	// make a bunch of projections to try to visualize what this looks like
 	duplicate /o s3d.density1, preal, pimag
 	preal = real(s3d.px)
 	pimag = imag(s3d.px)
@@ -872,7 +889,7 @@ function CalculatePolarizationWave(s3d)
 	return result
 end
 
-function sum3dsystem(s3d)
+function sum3dsystem(s3d) // this sums all of the relative densities of all the materials and determines how much each voxel holds.
 	struct ThreeDsystem &s3d
 	make /o/n=(dimsize(s3d.m1,0),s3d.num,s3d.num) sumwave
 	if(waveexists(s3d.m5))
