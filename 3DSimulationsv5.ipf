@@ -188,8 +188,13 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	ValDisplay valdispProgress,win=SIM_Status,limits={0,100,0},barmisc={10,1},highColor= (16385,16388,65535),pos={37.00,39.00},size={747.00,41.00},bodyWidth=747
 	ValDisplay valdispProgress,win=SIM_Status,frame=4,value=#(dfolder+"progressbar")
 	ListBox progresslistbox,win=SIM_STATUS,pos={18.00,98.00},size={796.00,134.00},listWave=$(dfolder+"Progresslist"),widths={57,688}
-	pathinfo save3dscattering
-	if(v_flag)
+	if(paramisdefault(moviepath) || strlen(moviepath)<3)
+			open /D/F=".mov" fileref as getdatafolder(0)+".mov"
+			//close fileref
+			moviepath = S_filename
+	endif
+	newpath /o/z/q Save3DScattering, parseFilePath(1,moviepath,":",1,0)
+	if(!v_flag)
 		Save/J/M="\n"/O/F/p=Save3DScattering s3d.logbook as s3d.name+".log"
 	endif
 	addtologbook(s3d,"Starting Up - Using " + s3d.modelname + " Morphology")
@@ -278,11 +283,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		endif
 		SavePict/O/WIN=Simulation_Layout /E=-5/P=_PictGallery_/w=(0,0,800,800) as "SimPict"
 		variable fileref
-		if(paramisdefault(moviepath) || strlen(moviepath)<3)
-			open /D/F=".mov" fileref as getdatafolder(0)+".mov"
-			//close fileref
-			moviepath = S_filename
-		endif
+		
 		//print moviepath
 		newmovie /z /PICT=SimPict /O as moviepath
 		if(v_flag)
