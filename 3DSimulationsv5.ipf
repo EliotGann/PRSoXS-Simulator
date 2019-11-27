@@ -359,29 +359,29 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	
 	newdatafolder /o/s hd5output
 	make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
-	hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_1_alignment, groupiD
+	hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_alignment, groupiD
 	make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_unaligned = s3d.m1[p][q][r][3]
-	hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,1024,1024} Mat_1_unaligned, groupiD
+	hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_1_unaligned, groupiD
 	if(waveexists(s3d.m2))
 		make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][t]
 		make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2)) /d Mat_2_unaligned = s3d.m2[p][q][r][3]
-		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_2_alignment, groupiD
-		hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,1024,1024} Mat_2_unaligned, groupiD
+		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_alignment, groupiD
+		hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_2_unaligned, groupiD
 		if(waveexists(s3d.m3))
 			make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][t]
 			make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2)) /d Mat_3_unaligned = s3d.m3[p][q][r][3]
-			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_3_alignment, groupiD
-			hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,1024,1024} Mat_3_unaligned, groupiD
+			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_3_alignment, groupiD
+			hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_3_unaligned, groupiD
 			if(waveexists(s3d.m4))
 				make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][t]
 				make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2)) /d Mat_4_unaligned = s3d.m4[p][q][r][3]
-				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_4_alignment, groupiD
-				hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,1024,1024} Mat_4_unaligned, groupiD
+				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_4_alignment, groupiD
+				hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_4_unaligned, groupiD
 				if(waveexists(s3d.m5))
 					make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][t]
 					make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2)) /d Mat_5_unaligned = s3d.m5[p][q][r][3]
-					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,1024,1024,3} Mat_5_alignment, groupiD
-					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64} /MAXD={256,1024,1024} Mat_5_unaligned, groupiD
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_5_alignment, groupiD
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64} /MAXD={256,2048,2048} Mat_5_unaligned, groupiD
 				endif
 			endif
 		endif
@@ -1062,17 +1062,17 @@ function model3D_existing(s3d)
 		return -1
 	endif
 	wave/z s3d.density2 = density2
-	if(!waveexists(s3d.density1))
+	if(!waveexists(s3d.density2))
 		print "Warning : Density2 wave was not found - If the number of materials is less than 3, this is fine :)"
 		return 1
 	endif
 	wave/z s3d.density3 = density3
-	if(!waveexists(s3d.density1))
+	if(!waveexists(s3d.density3))
 		print "Warning : Density3 wave was not found - If the number of materials is less than 4, this is fine :)"
 		return 1
 	endif
 	wave/z s3d.density4 = density4
-	if(!waveexists(s3d.density1))
+	if(!waveexists(s3d.density4))
 		print "Warning : Density4 wave was not found - If the number of materials is less than 5, this is fine :)"
 		return 1
 	endif
@@ -1103,17 +1103,17 @@ function model3D_existingal(s3d)
 		return -1
 	endif
 	wave/z s3d.density2 = density2
-	if(!waveexists(s3d.density1))
+	if(!waveexists(s3d.density2))
 		print "Warning : Density2 wave was not found - If the number of materials is less than 3, this is fine :)"
 		return 1
 	endif
 	wave/z s3d.density3 = density3
-	if(!waveexists(s3d.density1))
+	if(!waveexists(s3d.density3))
 		print "Warning : Density3 wave was not found - If the number of materials is less than 4, this is fine :)"
 		return 1
 	endif
 	wave/z s3d.density4 = density4
-	if(!waveexists(s3d.density1))
+	if(!waveexists(s3d.density4))
 		print "Warning : Density4 wave was not found - If the number of materials is less than 5, this is fine :)"
 		return 1
 	endif
