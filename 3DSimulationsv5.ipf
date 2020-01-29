@@ -24,6 +24,7 @@ structure ThreeDSystem
 	wave density2 // optional density of material 2 (implies 3 materials)
 	wave density3 // implies 4 materials
 	wave density4 // implies 5 materials
+	wave density5 // cannot be created by morphology, but only as the remnant of the other materials (to make total density everywhere 1)
 
 // Inputs for alignment calculations
 	string materialalignmentstring // list of materials alignment (for creating alignment)
@@ -693,36 +694,114 @@ function align3dsystem(s3d) // given a morphology of only scalar density, produc
 	else
 		for(i=0;i<nummaterials;i+=1)
 			mat = stringfromlist(i,matstr)
-			if(stringmatch("*Face-on*", mat))
+			
+			// make density and m matricies for all dimensions
+			if(i==0)
+				make /o/n=(dimsize(s3d.density1,0),dimsize(s3d.density1,1),dimsize(s3d.density1,2),4) s3d.m1=0
+				s3d.m1[][][][3] = s3d.density1[p][q][r]
+			elseif(i==1)
+				duplicate /o s3d.m1,s3d.m2
+				s3d.m2 = 0
+				if(i< nummaterials - 1)
+					s3d.m2[][][][3] = s3d.density2[p][q][r]
+				else
+					//this is the last material, so density wave doesn't exist, need to calculate it
+					s3d.m2[][][][3] = 1 - s3d.m1[p][q][r][0]^2 - s3d.m1[p][q][r][1]^2 - s3d.m1[p][q][r][2]^2 -s3d.m1[p][q][r][3]
+					duplicate /o s3d.density1,s3d.density2
+					s3d.density2[][][] = s3d.m2[p][q][r][3]
+				endif
+			elseif(i==2)
+				duplicate /o s3d.m1,s3d.m3
+				s3d.m3 = 0
+				if(i< nummaterials - 1)
+					s3d.m3[][][][3] = s3d.density3[p][q][r]
+				else
+					//this is the last material, so density wave doesn't exist, need to calculate it
+					s3d.m3[][][][3] = 1
+					s3d.m3[][][][3] -= s3d.m1[p][q][r][0]^2 - s3d.m1[p][q][r][1]^2 - s3d.m1[p][q][r][2]^2 -s3d.m1[p][q][r][3]
+					s3d.m3[][][][3] -= s3d.m2[p][q][r][0]^2 - s3d.m2[p][q][r][1]^2 - s3d.m2[p][q][r][2]^2 -s3d.m2[p][q][r][3]
+					duplicate /o s3d.density1,s3d.density3
+					s3d.density3[][][] = s3d.m3[p][q][r][3]
+				endif
+			elseif(i==3)
+				duplicate /o s3d.m1,s3d.m4
+				s3d.m4 = 0
+				if(i< nummaterials - 1)
+					s3d.m4[][][][3] = s3d.density4[p][q][r]
+				else
+					//this is the last material, so density wave doesn't exist, need to calculate it
+					s3d.m4[][][][3] = 1
+					s3d.m4[][][][3] -= s3d.m1[p][q][r][0]^2 - s3d.m1[p][q][r][1]^2 - s3d.m1[p][q][r][2]^2 -s3d.m1[p][q][r][3]
+					s3d.m4[][][][3] -= s3d.m2[p][q][r][0]^2 - s3d.m2[p][q][r][1]^2 - s3d.m2[p][q][r][2]^2 -s3d.m2[p][q][r][3]
+					s3d.m4[][][][3] -= s3d.m3[p][q][r][0]^2 - s3d.m3[p][q][r][1]^2 - s3d.m3[p][q][r][2]^2 -s3d.m3[p][q][r][3]
+					duplicate /o s3d.density1,s3d.density4
+					s3d.density4[][][] = s3d.m4[p][q][r][3]
+				endif
+			elseif(i==4)
+				duplicate /o s3d.m1,s3d.m4
+				s3d.m4 = 0
+				if(i< nummaterials - 1)
+					s3d.m5[][][][3] = s3d.density5[p][q][r] // this shouldn't exist, we are limited to 5 materials so 4 densities in the current code
+				else
+					//this is the last material, so density wave doesn't exist, need to calculate it
+					s3d.m5[][][][3] = 1
+					s3d.m5[][][][3] -= s3d.m1[p][q][r][0]^2 - s3d.m1[p][q][r][1]^2 - s3d.m1[p][q][r][2]^2 -s3d.m1[p][q][r][3]
+					s3d.m5[][][][3] -= s3d.m2[p][q][r][0]^2 - s3d.m2[p][q][r][1]^2 - s3d.m2[p][q][r][2]^2 -s3d.m2[p][q][r][3]
+					s3d.m5[][][][3] -= s3d.m3[p][q][r][0]^2 - s3d.m3[p][q][r][1]^2 - s3d.m3[p][q][r][2]^2 -s3d.m3[p][q][r][3]
+					s3d.m5[][][][3] -= s3d.m4[p][q][r][0]^2 - s3d.m4[p][q][r][1]^2 - s3d.m4[p][q][r][2]^2 -s3d.m4[p][q][r][3]
+					duplicate /o s3d.density1,s3d.density5
+					s3d.density5[][][] = s3d.m5[p][q][r][3]
+				endif
+			endif
+			
+			
+			
+			if(stringmatch("*Face-on*", mat)  || stringmatch(mat, "1*"))
 				align = 1
-			elseif(stringmatch("*Edge-on*", mat))
+			elseif(stringmatch("*Edge-on*", mat) || stringmatch(mat, "0*"))
 				align=0
 			else
-				continue
+				//don't do the calculation for this material, the previously made density and m matrix is sufficient
+				continue // move to next material
 			endif
 			splitstring/e="^[^,]*,([^,]*),([^,]*)" mat, alignmentwidth, alignmentstrength
 			strength = str2num(alignmentstrength)
 			width = str2num(alignmentwidth)
-			if(strength * align * width * 0 !=0)
-				continue // there is a nan, which will not work
-			endif
+			volfrac = mean(s3d.density1)
+			s3d.timesofar += stopmstimer(s3d.timer)/1e6
+			s3d.timer = startmstimer
 			if(i==0)
-				make /n=(dimsize(s3d.density1,0),dimsize(s3d.density1,1),dimsize(s3d.density1,2),4) s3d.m1
-				wave materialwave = s3d.m1
-			elseif(i==1)
-				make /n=(dimsize(s3d.density2,0),dimsize(s3d.density2,1),dimsize(s3d.density2,2),4) s3d.m2
-				wave materialwave = s3d.m2
-			elseif(i==2)
-				make /n=(dimsize(s3d.density3,0),dimsize(s3d.density3,1),dimsize(s3d.density3,2),4) s3d.m3
-				wave materialwave = s3d.m3
-			elseif(i==3)
-				make /n=(dimsize(s3d.density4,0),dimsize(s3d.density4,1),dimsize(s3d.density4,2),4) s3d.m4
-				wave materialwave = s3d.m4
-			else
-				continue
-			endif
+				wave alignmentw = createalignmentdensity(s3d.density1,width,strength, align, s3d.movie, s3d.timesofar)
+				duplicate/o alignmentw, s3d.m1
 				
-		//	createalignment(
+				s3d.m1 *=sqrt(s3d.density1[p][q][r])
+				s3d.m1[][][][3] *=sqrt(s3d.density1[p][q][r]) // last dimension is density not sqrt density, so it needs an extra multiplication
+				
+			elseif(i==1)
+				wave alignmentw = createalignmentdensity(s3d.density2,width,strength, align, s3d.movie, s3d.timesofar)
+				duplicate/o alignmentw, s3d.m2
+				
+				s3d.m2 *=sqrt(s3d.density2[p][q][r])
+				s3d.m2[][][][3] *=sqrt(s3d.density2[p][q][r])
+			elseif(i==2)
+				wave alignmentw = createalignmentdensity(s3d.density3,width,strength, align, s3d.movie, s3d.timesofar)
+				duplicate/o alignmentw, s3d.m3
+				
+				s3d.m3 *=sqrt(s3d.density3[p][q][r])
+				s3d.m3[][][][3] *=sqrt(s3d.density3[p][q][r])
+			elseif(i==3)
+				wave alignmentw = createalignmentdensity(s3d.density4,width,strength, align, s3d.movie, s3d.timesofar)
+				duplicate/o alignmentw, s3d.m4
+				
+				s3d.m4 *=sqrt(s3d.density4[p][q][r])
+				s3d.m4[][][][3] *=sqrt(s3d.density4[p][q][r])
+			elseif(i==4)
+				wave alignmentw = createalignmentdensity(s3d.density5,width,strength, align, s3d.movie, s3d.timesofar)
+				duplicate/o alignmentw, s3d.m5
+				
+				s3d.m5 *=sqrt(s3d.density5[p][q][r])
+				s3d.m5[][][][3] *=sqrt(s3d.density5[p][q][r])
+			endif
 		
 		endfor
 	endif
@@ -1760,9 +1839,9 @@ function Model3DPanel()
 	TabControl tab0,pos={8,7},size={458,443},proc=Model3dTabProc,tabLabel(0)="Morphology"
 	TabControl tab0,tabLabel(1)="Materials",tabLabel(2)="Scattering",value= 0
 	GroupBox MaterialsListText,pos={206,37},size={249,206},disable=1,title="List of Materials"
-	SetVariable SetRes,pos={20,31},size={258,16},title="Resolution (Film Width and Length) [Pixels]"
+	SetVariable SetRes,pos={20,31},size={275,16},title="Resolution (Film Width and Length) [Voxels]"
 	SetVariable SetRes,limits={10,5000,1},value= root:Packages:ScatterSim3D:resolution,live= 1
-	SetVariable SetSize,pos={180,60},size={137,16},title="Length Scale [Voxels]"
+	SetVariable SetSize,pos={180,60},size={145,16},title="Length Scale [Voxels]"
 	SetVariable SetSize,limits={1,5000,1},value= root:packages:ScatterSim3D:sizescale,live= 1
 	Button CalcMorphBut,pos={262,409},size={192,31},title="Calculate Morphology Now"
 	Button CalcAlignBut,pos={206,250},size={243,38},disable=1,title="Calculate Material Alignment Now"
@@ -1778,7 +1857,7 @@ function Model3DPanel()
 	CheckBox SaveParaPerp,variable= root:Packages:ScatterSim3D:SaveParaPerp1D
 	CheckBox SaveAnisotropy,pos={234,104},size={177,14},disable=1,title="Save Anisotropic Ratio Vs Energy"
 	CheckBox SaveAnisotropy,variable= root:Packages:ScatterSim3D:SaveAnisotropic1D
-	SetVariable SetThickness,pos={291,33},size={146,16},title="Thickness (Pixels)"
+	SetVariable SetThickness,pos={300,33},size={146,16},title="Thickness (Pixels)"
 	SetVariable SetThickness,limits={1,5000,1},value= root:Packages:ScatterSim3D:thickness,live= 1
 	SetVariable AlignmentSize,pos={43,108},size={153,30},disable=1,title="\\JCApproximate Width\r of Alignment [pixels]"
 	SetVariable AlignmentSize,limits={0,1000,0.01},value= root:Packages:ScatterSim3D:AlignmentSize
