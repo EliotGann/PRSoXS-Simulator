@@ -718,8 +718,8 @@ function align3dsystem(s3d) // given a morphology of only scalar density, produc
 				else
 					//this is the last material, so density wave doesn't exist, need to calculate it
 					s3d.m3[][][][3] = 1
-					s3d.m3[][][][3] -= s3d.m1[p][q][r][0]^2 - s3d.m1[p][q][r][1]^2 - s3d.m1[p][q][r][2]^2 -s3d.m1[p][q][r][3]
-					s3d.m3[][][][3] -= s3d.m2[p][q][r][0]^2 - s3d.m2[p][q][r][1]^2 - s3d.m2[p][q][r][2]^2 -s3d.m2[p][q][r][3]
+					s3d.m3[][][][3] -= s3d.m1[p][q][r][0]^2 + s3d.m1[p][q][r][1]^2 + s3d.m1[p][q][r][2]^2 + s3d.m1[p][q][r][3]
+					s3d.m3[][][][3] -= s3d.m2[p][q][r][0]^2 + s3d.m2[p][q][r][1]^2 + s3d.m2[p][q][r][2]^2 + s3d.m2[p][q][r][3]
 					duplicate /o s3d.density1,s3d.density3
 					s3d.density3[][][] = s3d.m3[p][q][r][3]
 				endif
@@ -731,9 +731,9 @@ function align3dsystem(s3d) // given a morphology of only scalar density, produc
 				else
 					//this is the last material, so density wave doesn't exist, need to calculate it
 					s3d.m4[][][][3] = 1
-					s3d.m4[][][][3] -= s3d.m1[p][q][r][0]^2 - s3d.m1[p][q][r][1]^2 - s3d.m1[p][q][r][2]^2 -s3d.m1[p][q][r][3]
-					s3d.m4[][][][3] -= s3d.m2[p][q][r][0]^2 - s3d.m2[p][q][r][1]^2 - s3d.m2[p][q][r][2]^2 -s3d.m2[p][q][r][3]
-					s3d.m4[][][][3] -= s3d.m3[p][q][r][0]^2 - s3d.m3[p][q][r][1]^2 - s3d.m3[p][q][r][2]^2 -s3d.m3[p][q][r][3]
+					s3d.m4[][][][3] -= s3d.m1[p][q][r][0]^2 + s3d.m1[p][q][r][1]^2 + s3d.m1[p][q][r][2]^2 + s3d.m1[p][q][r][3]
+					s3d.m4[][][][3] -= s3d.m2[p][q][r][0]^2 + s3d.m2[p][q][r][1]^2 + s3d.m2[p][q][r][2]^2 + s3d.m2[p][q][r][3]
+					s3d.m4[][][][3] -= s3d.m3[p][q][r][0]^2 + s3d.m3[p][q][r][1]^2 + s3d.m3[p][q][r][2]^2 + s3d.m3[p][q][r][3]
 					duplicate /o s3d.density1,s3d.density4
 					s3d.density4[][][] = s3d.m4[p][q][r][3]
 				endif
@@ -745,10 +745,10 @@ function align3dsystem(s3d) // given a morphology of only scalar density, produc
 				else
 					//this is the last material, so density wave doesn't exist, need to calculate it
 					s3d.m5[][][][3] = 1
-					s3d.m5[][][][3] -= s3d.m1[p][q][r][0]^2 - s3d.m1[p][q][r][1]^2 - s3d.m1[p][q][r][2]^2 -s3d.m1[p][q][r][3]
-					s3d.m5[][][][3] -= s3d.m2[p][q][r][0]^2 - s3d.m2[p][q][r][1]^2 - s3d.m2[p][q][r][2]^2 -s3d.m2[p][q][r][3]
-					s3d.m5[][][][3] -= s3d.m3[p][q][r][0]^2 - s3d.m3[p][q][r][1]^2 - s3d.m3[p][q][r][2]^2 -s3d.m3[p][q][r][3]
-					s3d.m5[][][][3] -= s3d.m4[p][q][r][0]^2 - s3d.m4[p][q][r][1]^2 - s3d.m4[p][q][r][2]^2 -s3d.m4[p][q][r][3]
+					s3d.m5[][][][3] -= s3d.m1[p][q][r][0]^2 + s3d.m1[p][q][r][1]^2 + s3d.m1[p][q][r][2]^2 + s3d.m1[p][q][r][3]
+					s3d.m5[][][][3] -= s3d.m2[p][q][r][0]^2 + s3d.m2[p][q][r][1]^2 + s3d.m2[p][q][r][2]^2 + s3d.m2[p][q][r][3]
+					s3d.m5[][][][3] -= s3d.m3[p][q][r][0]^2 + s3d.m3[p][q][r][1]^2 + s3d.m3[p][q][r][2]^2 + s3d.m3[p][q][r][3]
+					s3d.m5[][][][3] -= s3d.m4[p][q][r][0]^2 + s3d.m4[p][q][r][1]^2 + s3d.m4[p][q][r][2]^2 + s3d.m4[p][q][r][3]
 					duplicate /o s3d.density1,s3d.density5
 					s3d.density5[][][] = s3d.m5[p][q][r][3]
 				endif
@@ -4367,8 +4367,8 @@ function doalignmentmap(folder,[addtolayout])
 		string foldersave = getdatafolder(1)
 		setdatafolder root:Packages:ScatterSim3D:$folder
 	endif
-	wave m=m1save
-	wave /z m2 = m2save
+	wave m=m3save
+	wave /z m2 = m1save
 	wave density1
 	wave /z density2
 	wave /z density3
@@ -4377,25 +4377,25 @@ function doalignmentmap(folder,[addtolayout])
 	duplicate /o yloc, yloc2
 	make/o /n=(dimsize(m,1)*dimsize(m,2)) xcomp,ycomp,zcomp
 	make/o /n=(dimsize(m,1)*dimsize(m,2),2) arrowsyay, arrowsyay2
-	MAKE/O /N=(dimsize(m,1),dimsize(m,2)) slice = density1[0][p][q]
+	MAKE/O /N=(dimsize(m,1),dimsize(m,2)) slice = density1[5][p][q]
 	if(waveexists(density2))
-		slice += density2[0][p][q]
+		slice += density2[5][p][q]
 	endif
 	if(waveexists(density3))
-		slice += density3[0][p][q]
+		slice += density1[5][p][q]
 	endif
 	setscale /i x, 0,dimsize(m,1)*5,slice
 	setscale /i y, 0,dimsize(m,1)*5,slice
 	
-	multithread xcomp = m[0][xloc/5][yloc/5][0]
-	multithread ycomp = m[0][xloc/5][yloc/5][1]
-	multithread zcomp = m[0][xloc/5][yloc/5][2]
+	multithread xcomp = m[5][xloc/5][yloc/5][0]
+	multithread ycomp = m[5][xloc/5][yloc/5][1]
+	multithread zcomp = m[5][xloc/5][yloc/5][2]
 	multithread arrowsyay[][1] = atan(zcomp[p]/ycomp[p])
 	multithread arrowsyay[][0] = sqrt(zcomp[p]^2 + ycomp[p]^2) * 20
 	if(waveexists(m2))
-		multithread xcomp = m2[0][xloc/5][yloc/5][0]
-		multithread ycomp = m2[0][xloc/5][yloc/5][1]
-		multithread zcomp = m2[0][xloc/5][yloc/5][2]
+		multithread xcomp = m2[5][xloc/5][yloc/5][0]
+		multithread ycomp = m2[5][xloc/5][yloc/5][1]
+		multithread zcomp = m2[5][xloc/5][yloc/5][2]
 		multithread arrowsyay2[][1] = atan(zcomp[p]/ycomp[p])
 		multithread arrowsyay2[][0] = sqrt(zcomp[p]^2 + ycomp[p]^2) * 20
 		yloc2 = arrowsyay2[p][0] <4 ? nan : yloc2[p]
@@ -4678,4 +4678,135 @@ function sysrotate(mext,mout,angle, offsetx, offsety)
 	multithread mout[][][][1] = cos(angle*pi/180)*tempy[p][q][r] - sin(angle*pi/180) *mout[p][q][r][2]// y' = cos(th) y - sin(th) z
 	multithread mout[][][][2] = cos(angle*pi/180)*mout[p][q][r][2] + sin(angle*pi/180) *tempy[p][q][r]// z' = cos(th) z + sin(th) y
 
+end
+
+
+function /s variables_coreshell()
+	string variables = "Total Radius is Length scale above,String,^;"
+	variables +=  "Core Interpenetration [pixels],SetVariable,0;"
+	variables += "Shell Interpenetration [pixels],SetVariable,1;"
+	variables += "Minimum Seperation,SetVariable,.1;"
+	variables += "Number of Particles (Max),SetVariable,500;"
+	variables += "sigma of radiuses,setvariable,.1;"
+	variables += "Noise,SetVariable,0;"
+	variables += "Shell Width [px],SetVariable,1;"
+	variables += "Maximum radius [px],SetVariable,15;"
+	variables += "Minimum radius [px],SetVariable,2;"
+	return variables
+end
+function model3D_coreshell(s3d)
+	//Creates a spherical system, with two components, aligned 
+	// utilizes extra parameters, number of particles, polydispursity (a sigma of radiuses) and populates the 3D space with 
+		//aligned particles
+	// material 1 is insize the spheres, material 2 is outside (although the concentrations are determined by m2volfrac
+	//paramstring = 
+		//MORPHOLOGY parameters
+		//0 interpenetration of spheres (roughness smaller than wavelength)
+		//1 minimum seperation (when placing a new sphere into the system, it needs to be this far away from any others)
+			//	this can be a fraction of the radius (if less than 1) or a flat number of pixels (if greater than 1)
+		//2 number of particles // the maximum number of particles . the program will stop when it cannot fit anymore
+		//3 polydispursity (sigma of radiuses)
+		//4 thickness (this can be different than size)
+		//5 noise (percentage of vacuum - density variations)
+	//num = resolution (in each of 3 dimensions)
+	//size = average size of sphere (radius)
+	
+	struct ThreeDSystem &s3d
+	if(itemsinlist(s3d.paramstring,",")<5)
+		return -1
+	endif
+	newdatafolder /o/s CreatingSpheres
+	variable coreinterpenetration = 	str2num(stringfromlist( 1 ,s3d.paramstring,","))
+	variable shellinterpenetration = 	str2num(stringfromlist( 2 ,s3d.paramstring,","))
+	variable minsep = 			str2num(stringfromlist( 3 ,s3d.paramstring,","))
+	variable particlesnum = 	str2num(stringfromlist( 4 ,s3d.paramstring,","))
+	variable pd = 				str2num(stringfromlist( 5 ,s3d.paramstring,","))
+	variable thickness = 		s3d.thickness
+	variable noise = 			str2num(stringfromlist( 6 ,s3d.paramstring,","))
+	variable shellwidth = 		str2num(stringfromlist( 7 ,s3d.paramstring,","))
+	variable maxradius = 		min(str2num(stringfromlist( 8 ,s3d.paramstring,",")),thickness/2)
+	variable minradius = 		str2num(stringfromlist( 9 ,s3d.paramstring,","))
+	
+
+	
+	make /o /n=(thickness,s3d.num,s3d.num) mat=1, core=0,xwave, ywave, zwave
+	
+	make/B/U /o /n=(thickness,s3d.num,s3d.num,maxradius) exmat= (p <= t) || (q <= t) || (r <= t) || (p >= thickness-t) || (q >= s3d.num-t) || (r >= s3d.num-t) ? 0 : 1
+	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave
+	if(s3d.movie)
+		Execute("Spheres3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
+		Execute("exportgizmo wave=\"testimage\"  ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
+	endif
+	setscale /i x, -thickness/2, thickness/2, mat,core, exmat,xwave, ywave, zwave
+	setscale /i y, -s3d.num/2, s3d.num/2, mat,core, exmat,xwave, ywave, zwave
+	setscale /i z, -s3d.num/2, s3d.num/2, mat,core, exmat,xwave, ywave, zwave
+	xwave = x
+	ywave = y
+	zwave = z
+	redimension /n=(thickness*s3d.num*s3d.num) xwave, ywave, zwave
+	variable i,radius, orad, cx, cy, cz, failed, fnum =0, xmn,xmx,ymn,ymx,zmn,zmx, loc
+	
+	for(i=0;i<particlesnum;i+=1)
+		fnum=0
+		do
+			failed = 0
+			radius = abs(gnoise(pd)+s3d.size)
+			radius =radius < shellwidth ? shellwidth : radius
+			radius = min(maxradius,max(max(shellwidth,minradius),radius))
+			if(minsep<1)
+				orad = radius*(1+minsep/2)
+			else
+				orad = radius + minsep/2
+			endif
+			//duplicate/o /r=()()()(ceil(2*orad)) exmat,tempwave
+			redimension /n=(thickness,s3d.num,s3d.num) tempwave
+			multithread tempwave[][][] = exmat[p][q][r][ceil(orad)]
+//			imagefilter /n=(ceil(2*orad)) /o min3d tempwave
+//			multithread tempwave = tempwave<1? 0 : 1 
+//			multithread tempwave = (p <= orad) || (q <= orad) || (r <= orad) || (p >= thickness-orad) || (q >= s3d.num-orad) || (r >= s3d.num-orad) ? 0 : tempwave[p][q][r]
+  			if(wavemax(tempwave)<1)
+				//there are no possible locations for this radius, find another
+				failed=1
+			else
+				// randomly pick a pixel that is good for the center
+				redimension /n=(thickness*s3d.num*s3d.num) tempwave
+				integrate tempwave /D=intwave
+				loc = binarysearch(intwave, enoise(wavemax(intwave)/2)+wavemax(intwave)/2)
+				cx = xwave[loc]
+				cy = ywave[loc]
+				cz = zwave[loc]
+			endif
+			
+			if(failed && (fnum>10))
+				print "warning : failed to find unoccupied location - only " +num2str(i) +" particles created"		
+				break // get out of the loop
+				//we have failed 30 times to create a radius or find a location
+			endif
+			fnum +=1
+		while(failed==1)
+		if(failed)
+			break // do not add this sphere to the system
+					// we are done adding spheres
+		endif
+		// subtract out this sphere from the matrix  // matrix starts at 1s, within this sphere, multiply this by 0, outside multiply by 1
+		multithread mat*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < radius^2 ? 0 : 1 
+		//multithread core*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < radius^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (radius-shellwidth)^2 ? 1 : 0 
+		multithread core+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < (radius-shellwidth)^2 ? 1 : 0
+		multithread exmat*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (orad+t)^2 ? 0 : 1 
+		
+		if(s3d.movie)
+			execute("ModifyGizmo /n=Spheres3D update=2")
+			doupdate
+			Execute "exportgizmo wave=\"testimage\"   "
+			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
+			doupdate
+			savepict /p=_PictGallery_ /E=-5 /N=Spinoidal3DLayout /o as "Frame3D"
+			addmovieframe /pict=Frame3D
+		endif
+	endfor
+	setdatafolder ::
+	imagefilter /n=(shellinterpenetration)/o gauss3d mat
+	imagefilter /n=(coreinterpenetration)/o gauss3d core
+	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
+	duplicate /o core,s3d.density2 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
 end
