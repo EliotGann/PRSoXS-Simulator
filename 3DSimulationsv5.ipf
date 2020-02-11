@@ -78,6 +78,7 @@ structure ThreeDSystem
 	
 // scattering outputs saved (if chosen) and output for all energies
 	wave/d Scatter3DSave // Full 2D Scattering Scattering Pattern Saved vs Energy
+	//wave/d/c PZ3DSave // Full 3D PZ field Saved vs Energy
 	wave /d int3DvsEn // same but for the 3D calculated data
 	wave /d ratio3DvsEn // same but for the 3D calculated data
 	wave /d Para3DvsEn // same but for the 3D calculated data
@@ -430,13 +431,17 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	
 	make/d/o/n=(floor(s3d.num/sqrt(2)),energynum) int3DvsEn=0,ratio3DvsEn=0, para3dvsen, perp3dvsen
 	make/d/o/n=(s3d.num,s3d.num,energynum) scatter3DSave
+	//make/c/d/o/n=(s3d.thickness,s3d.num,s3d.num,energynum) PZ3DSave
 	wave s3d.scatter3DSave=scatter3DSave, s3d.int3DvsEn=int3DvsEn, s3d.ratio3DvsEn=ratio3DvsEn, s3d.para3dvsen=para3dvsen, s3d.perp3dvsen=perp3dvsen
+	//wave /c s3d.pz3dsave = pz3dsave
 	setscale /p x,pi/s3d.num,pi/s3d.num, s3d.int3DvsEn,s3d.ratio3DvsEn, s3d.para3dvsen, s3d.perp3dvsen // in physics units of q
 	setscale /i x, -pi/s3d.voxelsize,pi/s3d.voxelsize, s3d.scatter3DSave
 	setscale /i y, -pi/s3d.voxelsize,pi/s3d.voxelsize, s3d.scatter3DSave
 	setscale /i y, energymin, energymax, s3d.int3DvsEn,s3d.ratio3DvsEn, s3d.para3dvsen, s3d.perp3dvsen // only valid if not using a energy wave // best to not used it, and loot at the wave
 	setscale /i z, energymin, energymax, s3d.scatter3DSave // only valid if not using a wave, best to just use the wave
-	
+	//setscale /p x,dimoffset(s3d.density1,0), dimdelta(s3d.density1,0), PZ3DSave
+	//setscale /p y,dimoffset(s3d.density1,1), dimdelta(s3d.density1,1), PZ3DSave
+	//setscale /p z,dimoffset(s3d.density1,2), dimdelta(s3d.density1,2), PZ3DSave
 	
 	variable en, j
 	variable enstep = (energymax-energymin)/(energynum-1)
@@ -657,7 +662,7 @@ function align3dsystem(s3d) // given a morphology of only scalar density, produc
 			width = str2num(alignmentwidth)
 			s3d.timesofar += stopmstimer(s3d.timer)/1e6
 			s3d.timer = startmstimer
-			wave alignmentw = createalignmentdensity(s3d.density1,width,strength, align, s3d.movie, s3d.timesofar)
+			wave alignmentw = createalignmentdensity(s3d.density1,width,strength, align, s3d)
 			//createbinarysystem(s3d.density1,width,strength, 1, 0, 1- volfrac, 0, 1,s=s)
 			duplicate/o alignmentw, s3d.m1
 			//s3d.m1 *=s3d.density1[p][q][r]
@@ -684,7 +689,7 @@ function align3dsystem(s3d) // given a morphology of only scalar density, produc
 			volfrac = mean(s3d.density1)
 			s3d.timesofar += stopmstimer(s3d.timer)/1e6
 			s3d.timer = startmstimer
-			wave alignmentw = createalignmentdensity(s3d.density1,width,strength, align, s3d.movie, s3d.timesofar)
+			wave alignmentw = createalignmentdensity(s3d.density1,width,strength, align, s3d)
 		//	wave alignmentw = root:packages:ScatterSim3D:test:sn
 			//createbinarysystem(s3d.density1,width,strength, 1, 0, 1- volfrac, 0, 1,s=s)
 			duplicate/o alignmentw, s3d.m2
@@ -771,32 +776,32 @@ function align3dsystem(s3d) // given a morphology of only scalar density, produc
 			s3d.timesofar += stopmstimer(s3d.timer)/1e6
 			s3d.timer = startmstimer
 			if(i==0)
-				wave alignmentw = createalignmentdensity(s3d.density1,width,strength, align, s3d.movie, s3d.timesofar)
+				wave alignmentw = createalignmentdensity(s3d.density1,width,strength, align, s3d)
 				duplicate/o alignmentw, s3d.m1
 				
 				s3d.m1 *=sqrt(s3d.density1[p][q][r])
 				s3d.m1[][][][3] *=sqrt(s3d.density1[p][q][r]) // last dimension is density not sqrt density, so it needs an extra multiplication
 				
 			elseif(i==1)
-				wave alignmentw = createalignmentdensity(s3d.density2,width,strength, align, s3d.movie, s3d.timesofar)
+				wave alignmentw = createalignmentdensity(s3d.density2,width,strength, align, s3d)
 				duplicate/o alignmentw, s3d.m2
 				
 				s3d.m2 *=sqrt(s3d.density2[p][q][r])
 				s3d.m2[][][][3] *=sqrt(s3d.density2[p][q][r])
 			elseif(i==2)
-				wave alignmentw = createalignmentdensity(s3d.density3,width,strength, align, s3d.movie, s3d.timesofar)
+				wave alignmentw = createalignmentdensity(s3d.density3,width,strength, align, s3d)
 				duplicate/o alignmentw, s3d.m3
 				
 				s3d.m3 *=sqrt(s3d.density3[p][q][r])
 				s3d.m3[][][][3] *=sqrt(s3d.density3[p][q][r])
 			elseif(i==3)
-				wave alignmentw = createalignmentdensity(s3d.density4,width,strength, align, s3d.movie, s3d.timesofar)
+				wave alignmentw = createalignmentdensity(s3d.density4,width,strength, align, s3d)
 				duplicate/o alignmentw, s3d.m4
 				
 				s3d.m4 *=sqrt(s3d.density4[p][q][r])
 				s3d.m4[][][][3] *=sqrt(s3d.density4[p][q][r])
 			elseif(i==4)
-				wave alignmentw = createalignmentdensity(s3d.density5,width,strength, align, s3d.movie, s3d.timesofar)
+				wave alignmentw = createalignmentdensity(s3d.density5,width,strength, align, s3d)
 				duplicate/o alignmentw, s3d.m5
 				
 				s3d.m5 *=sqrt(s3d.density5[p][q][r])
@@ -813,6 +818,7 @@ function storeintegrations(s3d)
 	s3d.scatter3dSave[][][s3d.step] = s3d.scatter3d(x)(y)
 	s3d.perp3Dvsen[][s3d.step] =  s3d.int3dperp(x)
 	s3d.para3Dvsen[][s3d.step] = s3d.int3dpara(x)
+	//s3d.pz3dSave[][][][s3d.step] = s3d.pz[p][q][r]
 	
 end
 function radialintegratesystem(s3d)
@@ -1514,13 +1520,15 @@ function pximagProjectiondisp()
 End
 
 
-function /wave createalignmentdensity(wavein,sigma,intensity, alignment, movie, timeoffset)
+function /wave createalignmentdensity(wavein,sigma,intensity, alignment, s3d)
+
+	struct ThreeDSystem &s3d
 	wave wavein
 	variable sigma, intensity // intensity is between 0 and 1
 	variable alignment // face on is 1 - the uniaxial vector to be pointing parallel to the interface normal
 					// edge on is 0 - the uniaxial vector to be pointing along the interface , perpindicular to normal
-	variable movie // wether to add the alignment step to a movie
-	variable timeoffset
+	variable movie = s3d.movie // wether to add the alignment step to a movie
+	variable timeoffset = s3d.timesofar
 	variable timer = startmstimer
 	duplicate/o wavein, asm, asum, aadd, dx, dy, dz
 	//imagefilter /o/n=(3) gauss3d asm
@@ -1546,25 +1554,10 @@ function /wave createalignmentdensity(wavein,sigma,intensity, alignment, movie, 
 	make /o/n=(dimsize(sn,1)*dimsize(sn,2),4) arrowsyay
 	Alignmentmapdisp()
 	if(alignment==1)
-		timeoffset += stopmstimer(timer)/1e6
-		timer = startmstimer
-		//evolvesystem(sn,sb,-500,0,100,-1000,.02,.0001,100, movie, timeoffset) 
-		evolvesystem(sn,sb,-10,10,10,-100,.2,.02,200, movie, timeoffset)
-	//	timeoffset += stopmstimer(timer)/1e6
-	//	timer = startmstimer
-		//evolvesystem(sn,sb,-100,100,1000,-1000,.01,.001,100, movie, timeoffset)
+		evolvesystem(sn,sb,-10,10,10,-100,.2,.02,200, s3d)
 	else
 		sn=enoise(.1)
-		timeoffset += stopmstimer(timer)/1e6
-		timer = startmstimer
-//		evolvesystem(sn,sb,-1,1,1000,30000,.1,.001,100, movie, timeoffset)
-//		timeoffset += stopmstimer(timer)/1e6
-//		timer = startmstimer
-//		evolvesystem(sn,sb,-100,100,-100,1000,.1,.02,100, movie, timeoffset)
-//		timeoffset += stopmstimer(timer)/1e6
-//		timer = startmstimer
-//		evolvesystem(sn,sb,-100,100,700,1000,.01,.001,100, movie, timeoffset) 
-		evolvesystem(sn,sb,-10,10,10,100,.2,.02,200, movie, timeoffset)
+		evolvesystem(sn,sb,-10,10,10,100,.2,.02,200, s3d)
 	endif
 	// enforce alignment strength (intensity) and alignment width (sigma)
 	duplicate/o dx, interfaceloc
@@ -1578,15 +1571,17 @@ function /wave createalignmentdensity(wavein,sigma,intensity, alignment, movie, 
 	sn[][][][3] = 1 - sn[p][q][r][0]^2- sn[p][q][r][1]^2- sn[p][q][r][2]^2
 	return sn
 end	
-function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,movie, timeoffset)
+function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,s3d)
+
+	struct ThreeDSystem &s3d
 	wave sn, sb
 	variable Ec // lower energy when aligned with nearest neighbors	- should be negative
 	variable Ea // cost of being different amplitudes of neighbors 	- should be positive
 	variable Eb // entropic cost of being non zero  	- should be positive
 	variable Es // alignment with barrier 			- should be negative
 	variable jump, temp
-	variable n, movie, timeoffset
-	variable timer = startmstimer, timesofar=timeoffset
+	variable n
+	variable movie = s3d.movie
 	variable numx=dimsize(sn,0), numy=dimsize(sn,1), numz=dimsize(sn,2)
 	make/o /n=(dimsize(sn,1)*dimsize(sn,2)) xloc = mod(p,dimsize(sn,1)),yloc = floor(p/dimsize(sn,1))
 	make/o /n=(dimsize(sn,1)*dimsize(sn,2)) xcomp,ycomp,zcomp
@@ -1670,9 +1665,7 @@ function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,movie, timeoffset)
 		multithread En += Es * abs(sn[p][q][r][0] *sb[p][q][r][0] + sn[p][q][r][1] * sb[p][q][r][1] + sn[p][q][r][2] * sb[p][q][r][2] )
 		multithread En -= Es * sqrt((sn[p][q][r][1] *sb[p][q][r][0] - sn[p][q][r][0] * sb[p][q][r][1])^2  + (sn[p][q][r][2] *sb[p][q][r][0] - sn[p][q][r][0] * sb[p][q][r][2])^2  + (sn[p][q][r][1] *sb[p][q][r][2] - sn[p][q][r][2] * sb[p][q][r][1])^2 ) // lower energy, the better aligned with boundary
 		
-		timesofar += stopmstimer(timer)/1e6
-		timer = startmstimer
-		print "Alignment Time : "+Time2str(timesofar) +" - Alignment Step " + num2str(i) + " of "+num2str(n)+ "  -  Total Alignment Energy : " + num2str(mean(En))
+		addtologbook(s3d," - Alignment Step " + num2str(i) + " of "+num2str(n)+ "  -  Total Alignment Energy : " + num2str(mean(En)))
 //metropolis algorithm 
 		multithread tempw[][][] = Exp(-(Etest[p][q][r]- En[p][q][r])/temp) > enoise(.5)+.5 ? 1 : 0 // one test for all three components at each location ie, don't just keep the x component and throw the y and z out
 		multithread sn[][][][] = tempw[p][q][r] ? stest[p][q][r][t] : sn[p][q][r][t]
@@ -1690,7 +1683,6 @@ function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,movie, timeoffset)
 			addmovieframe
 		endif
 	endfor
-	timesofar += stopmstimer(timer)/1e6
 	killwaves /a/z
 	setdatafolder ::
 	killdatafolder/z alignment
