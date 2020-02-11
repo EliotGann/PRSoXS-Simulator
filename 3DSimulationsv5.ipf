@@ -4802,3 +4802,128 @@ function model3D_coreshell(s3d)
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
 	duplicate /o core,s3d.density2 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
 end
+
+
+function /s special_hd5()
+	nvar /z redoalignment
+	if(nvar_Exists(redoalignment))
+		if(redoalignment)
+			return ""
+		else
+			return "IncludesAlignment"
+		endif
+	else
+		return ""
+	endif
+end
+
+function /s variables_hd5()
+	string variables = "Path,String,;RedoAlignment,Checkbox,0"
+	return variables
+end
+function model3D_hd5(s3d)
+	struct ThreeDSystem &s3d
+	if(itemsinlist(s3d.paramstring,",")<1)
+		return -1
+	endif
+	string filepath = stringfromlist(0,s3d.paramstring,",")
+	variable/g redoalignment = str2num(stringfromlist(1,s3d.paramstring,","))
+	variable hfile
+	
+	HDF5OpenFile /z /r hfile as filepath
+	if(v_flag)
+		HDF5OpenFile /i/r hfile as filepath
+	endif
+	if(v_flag)
+		addtologbook(s3d,"Failed to open file successfully. Check filepath validity")
+		return -1
+	endif
+	
+	newdatafolder /o hdf5matrices
+	
+	HDF5LoadGroup /o hdf5matrices, hfile, "vector_morphology"
+	HDF5LoadGroup /o hdf5matrices, hfile, "igor_parameters"
+	HDF5LoadGroup /o hdf5matrices, hfile, "morphology_variables"
+	
+	setdatafolder hdf5matrices
+	wave /z Mat_1_alignment, Mat_1_unaligned
+	wave /z Mat_2_alignment, Mat_2_unaligned
+	wave /z Mat_3_alignment, Mat_3_unaligned
+	wave /z Mat_4_alignment, Mat_4_unaligned
+	wave /z Mat_5_alignment, Mat_5_unaligned
+	
+	
+	nvar igorrotation
+	s3d.rot = igorrotation
+	nvar igornum
+	s3d.num = igornum
+	nvar igorthickness
+	s3d.thickness = igorthickness
+	nvar igorvoxelsize
+	s3d.voxelsize = igorvoxelsize
+	nvar igormaterialnum
+	s3d.materialnum = igormaterialnum
+	svar igorparamstring
+	s3d.paramstring = igorparamstring
+	svar igormodelname
+	s3d.modelname = igormodelname
+	svar igorpath
+	s3d.path = igorpath
+	svar igorname
+	s3d.name = igorname
+	nvar igormovie
+	s3d.movie = igormovie
+	svar igormaterials
+	s3d.materials = igormaterials
+	svar igorefield
+	s3d.efield = igorefield
+	
+	nvar voxel_size_nm
+	s3d.voxelsize = voxel_size_nm
+	svar morphology_creator
+	s3d.modelname = replacestring("EG_",morphology_creator,"")
+	svar name
+	s3d.name = name
+	
+	setdatafolder ::
+	
+	
+	if(waveexists(Mat_1_alignment))
+		duplicate /o Mat_1_unaligned, s3d.density1
+		duplicate /o Mat_1_alignment, s3d.m1
+		redimension /n=(dimsize(Mat_1_alignment,0),dimsize(Mat_1_alignment,1),dimsize(Mat_1_alignment,2),4) s3d.m1
+		s3d.m1[][][][3] = 	Mat_1_unaligned[p][q][r]
+		s3d.density1 = s3d.m1[p][q][r][0]^2 + s3d.m1[p][q][r][1]^2 + s3d.m1[p][q][r][2]^2 + s3d.m1[p][q][r][3]
+	endif
+	if(waveexists(Mat_2_alignment))
+		duplicate /o Mat_2_unaligned, s3d.density2
+		duplicate /o Mat_2_alignment, s3d.m2
+		redimension /n=(dimsize(Mat_2_alignment,0),dimsize(Mat_2_alignment,1),dimsize(Mat_2_alignment,2),4) s3d.m2
+		s3d.m2[][][][3] = 	Mat_2_unaligned[p][q][r]
+		s3d.density2 = s3d.m2[p][q][r][0]^2 + s3d.m2[p][q][r][1]^2 + s3d.m2[p][q][r][2]^2 + s3d.m2[p][q][r][3]
+	endif
+	if(waveexists(Mat_3_alignment))
+		duplicate /o Mat_3_unaligned, s3d.density3
+		duplicate /o Mat_3_alignment, s3d.m3
+		redimension /n=(dimsize(Mat_3_alignment,0),dimsize(Mat_3_alignment,1),dimsize(Mat_3_alignment,2),4) s3d.m3
+		s3d.m3[][][][3] = 	Mat_3_unaligned[p][q][r]
+		s3d.density3 = s3d.m3[p][q][r][0]^2 + s3d.m3[p][q][r][1]^2 + s3d.m3[p][q][r][2]^2 + s3d.m3[p][q][r][3]
+	endif
+	if(waveexists(Mat_4_alignment))
+		duplicate /o Mat_4_unaligned, s3d.density4
+		duplicate /o Mat_4_alignment, s3d.m4
+		redimension /n=(dimsize(Mat_4_alignment,0),dimsize(Mat_4_alignment,1),dimsize(Mat_4_alignment,2),4) s3d.m4
+		s3d.m4[][][][3] = 	Mat_4_unaligned[p][q][r]
+		s3d.density4 = s3d.m4[p][q][r][0]^2 + s3d.m4[p][q][r][1]^2 + s3d.m4[p][q][r][2]^2 + s3d.m4[p][q][r][3]
+	endif
+	if(waveexists(Mat_5_alignment))
+		duplicate /o Mat_5_unaligned, s3d.density5
+		duplicate /o Mat_5_alignment, s3d.m5
+		redimension /n=(dimsize(Mat_5_alignment,0),dimsize(Mat_5_alignment,1),dimsize(Mat_5_alignment,2),4) s3d.m5
+		s3d.m5[][][][3] = 	Mat_5_unaligned[p][q][r]
+		s3d.density5 = s3d.m5[p][q][r][0]^2 + s3d.m5[p][q][r][1]^2 + s3d.m5[p][q][r][2]^2 + s3d.m5[p][q][r][3]
+	endif
+	
+	HDF5CloseFile hfile
+	
+end
