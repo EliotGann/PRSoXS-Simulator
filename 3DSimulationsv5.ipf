@@ -4736,7 +4736,7 @@ function model3D_coreshell(s3d)
 	ywave = y
 	zwave = z
 	redimension /n=(thickness*s3d.num*s3d.num) xwave, ywave, zwave
-	variable i,radius, orad, cx, cy, cz, failed, fnum =0, xmn,xmx,ymn,ymx,zmn,zmx, loc
+	variable i,radius, orad, cx, cy, cz, failed, fnum =0, xmn,xmx,ymn,ymx,zmn,zmx, loc, volradmin, volradmax, volshellmin, volshellmax
 	
 	for(i=0;i<particlesnum;i+=1)
 		fnum=0
@@ -4745,6 +4745,9 @@ function model3D_coreshell(s3d)
 			radius = abs(gnoise(pd)+s3d.size)
 			radius =radius < shellwidth ? shellwidth : radius
 			radius = min(maxradius,max(max(shellwidth,minradius),radius))
+			
+			
+			
 			if(minsep<1)
 				orad = radius*(1+minsep/2)
 			else
@@ -4781,9 +4784,13 @@ function model3D_coreshell(s3d)
 					// we are done adding spheres
 		endif
 		// subtract out this sphere from the matrix  // matrix starts at 1s, within this sphere, multiply this by 0, outside multiply by 1
-		multithread mat*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < radius^2 ? 0 : 1 
+		multithread mat*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < (radius-.5)^2 ? 0 : 1 
+		multithread mat *= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (radius-.5)^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < (radius+.5)^2  ? -(radius-.5) + sqrt((x-cx)^2 + (y-cy)^2 + (z-cz)^2) : 1 
+		
 		//multithread core*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < radius^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (radius-shellwidth)^2 ? 1 : 0 
-		multithread core+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < (radius-shellwidth)^2 ? 1 : 0
+		multithread core+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < (radius-shellwidth-.5)^2 ? 1 : 0
+		multithread core+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (radius-shellwidth-.5)^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < (radius-shellwidth+.5)^2  ? (radius-shellwidth+.5) - sqrt((x-cx)^2 + (y-cy)^2 + (z-cz)^2)  : 0
+		
 		multithread exmat*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (orad+t)^2 ? 0 : 1 
 		
 		if(s3d.movie)
@@ -4797,8 +4804,12 @@ function model3D_coreshell(s3d)
 		endif
 	endfor
 	setdatafolder ::
-	imagefilter /n=(shellinterpenetration)/o gauss3d mat
-	imagefilter /n=(coreinterpenetration)/o gauss3d core
+	if(shellinterpenetration >= 3)
+		imagefilter /n=(shellinterpenetration)/o gauss3d mat
+	endif
+	if(coreinterpenetration >= 3)
+		imagefilter /n=(coreinterpenetration)/o gauss3d core
+	endif
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
 	duplicate /o core,s3d.density2 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
 end
