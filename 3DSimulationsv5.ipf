@@ -4966,3 +4966,57 @@ function model3D_hd5(s3d)
 	HDF5CloseFile hfile
 	
 end
+
+function writeconfig(s3d,configfolder, starten,enden,incen)
+	struct ThreeDSystem &s3d
+	string configfolder
+	variable starten, enden, incen
+	newpath /c/o/q cyrsoxspath, configfolder
+	variable configref
+	open /p=cyrsoxspath configref as "config.txt"
+	fprintf configref, "StartEnergy = %.2f;\r", starten
+	fprintf configref, "EndEnergy = %.2f;\r", enden
+	fprintf configref, "IncrementEnergy = %.2f;\r", incen
+	fprintf configref, "StartAngle = 0.0;\r"
+	fprintf configref, "EndAngle = 360.0;\r"
+	fprintf configref, "IncrementAngle = 2.0;\r"
+	fprintf configref, "NumThreads = 4;\r"
+	fprintf configref, "NumX = "+num2str(s3d.num)+";\r"
+	fprintf configref, "NumY = "+num2str(s3d.num)+";\r"
+	fprintf configref, "NumZ = "+num2str(s3d.thickness)+";\r"
+	fprintf configref, "PhysSize = %.2f;\r", s3d.voxelsize
+
+	close configref
+	
+	variable en,mat,index=0,w, tempref
+	
+	string materialname
+	
+	make/o/n=(s3d.materialnum) matfilerefs
+	for(mat=0;mat<s3d.materialnum;mat++)
+		materialname = stringfromlist(mat,s3d.materials)
+		open /p=cyrsoxspath tempref as "Material"+num2str(mat)+".txt"
+		matfilerefs[mat] = tempref
+	endfor
+	
+	
+	
+	for(en=starten;en<enden+incen;en+=incen)
+		w = 1239.84197/en
+		for(mat=0;mat<s3d.materialnum;mat++)
+			materialname = stringfromlist(mat,s3d.materials,",")
+			fprintf matfilerefs[mat], "EnergyData%d:\r",index
+			fprintf matfilerefs[mat], "{\r"
+			fprintf matfilerefs[mat], "Energy = %.2f;\r", en
+			fprintf matfilerefs[mat], "BetaPara = %.8f;\r", getbeta(materialname,w,aligned=1)
+			fprintf matfilerefs[mat], "BetaPerp = %.8f;\r", getbeta(materialname,w,aligned=0)
+			fprintf matfilerefs[mat], "DeltaPara = %.8f;\r", getdelta(materialname,w,aligned=1)
+			fprintf matfilerefs[mat], "DeltaPerp = %.8f;\r", getdelta(materialname,w,aligned=0)
+			fprintf matfilerefs[mat], "}\r"
+		endfor
+		index++
+	endfor
+	close /A
+			
+end
+
