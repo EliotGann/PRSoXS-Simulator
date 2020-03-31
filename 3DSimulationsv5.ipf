@@ -128,7 +128,7 @@ function updatephase(s3d,phase)
 end
 	
 
-function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,materiallist,materialalignmentstring,efield,energymin,energymax,energynum[movie, save3d,moviepath,enwave,rotatesys])
+function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,materiallist,materialalignmentstring,efield,energymin,energymax,energynum[movie, save3d,moviepath,enwave,rotatesys,skipsim,outputcy])
 	// electric field is always in the y z plane
 	// modelname - a string with the name of the model  accepted models are specificed below
 // morphology parameters	
@@ -154,9 +154,9 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	// enwave - overwrites energy min, max and num and just calculated the energy values in this wave, if it exists
 	// boolean to rotate the system - greatly increases the quality o he calculation, can be done in he fuure by roating the efield, rather than the elaborate way it is done now
 	string modelname,paramstring,materiallist,materialalignmentstring,efield, moviepath
-	variable sizescale, resolution, energymin,energymax,energynum, movie, save3d, thickness,voxelsize, rotatesys
+	variable sizescale, resolution, energymin,energymax,energynum, movie, save3d, thickness,voxelsize, rotatesys, skipsim, outputcy
 	wave/z enwave // this will override the energy start, step etc, with arbitrary energy steps
-
+	
 		
 	struct ThreeDSystem s3D
 	variable result, timer1
@@ -209,6 +209,8 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	addtologbook(s3d,"efield: along Z")
 	addtologbook(s3d,"modelname: " + modelname)
 	addtologbook(s3d,"movie: " + num2str(movie))
+	addtologbook(s3d,"Output for CyRSoXS input: " + num2str(outputcy))
+	addtologbook(s3d,"Skip the Simulation: " + num2str(skipsim))
 	addtologbook(s3d,"Material Slignment String: " + materialalignmentstring)
 	
 	string cmdstr = "Model3D("
@@ -238,6 +240,12 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	endif
 	if(!paramisdefault(rotatesys))
 		cmdstr += "rotatesys=" + num2str(rotatesys) + ","
+	endif
+	if(!paramisdefault(outputcy))
+		cmdstr += "outputcy=" + num2str(outputcy) + ","
+	endif
+	if(!paramisdefault(skipsim))
+		cmdstr += "skipsim=" + num2str(skipsim) + ","
 	endif
 	cmdstr = removeending(cmdstr,",")
 	cmdstr += ")"
@@ -345,86 +353,97 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		//Print "Time : "+time2str(s3d.timesofar) +"  -  Check of system density checks out"
 	endif
 	
+	variable enstep = (energymax-energymin)/(energynum-1)
 	
 	
-	
-	
-	// At this point we have all the values that we need.  we could save the model now to disk, or load a model from disk at this point
-	// data to save to model file
-	// m1-m5 (if they exist)
-		// first three dimensions are the aligned component - should go into mat_(1-5)_alignment vectors field
-		// fourth dimension is the unaligned component should go into mat_(1-5)_unaligned scalar field
-
-	variable h5file, groupid
-	HDF5CreateFile /O h5file as replacestring("mov",replacestring("mp4",moviepath,"hd5"),"hd5")
-	HDF5CreateGroup h5file , "vector_morphology" , groupID
-	
-	newdatafolder /o/s hd5output
-	make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
-	hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_alignment, groupiD
-	make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_unaligned = s3d.m1[p][q][r][3]
-	hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_1_unaligned, groupiD
-	if(waveexists(s3d.m2))
-		make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][t]
-		make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2)) /d Mat_2_unaligned = s3d.m2[p][q][r][3]
-		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_alignment, groupiD
-		hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_2_unaligned, groupiD
-		if(waveexists(s3d.m3))
-			make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][t]
-			make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2)) /d Mat_3_unaligned = s3d.m3[p][q][r][3]
-			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_3_alignment, groupiD
-			hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_3_unaligned, groupiD
-			if(waveexists(s3d.m4))
-				make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][t]
-				make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2)) /d Mat_4_unaligned = s3d.m4[p][q][r][3]
-				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_4_alignment, groupiD
-				hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_4_unaligned, groupiD
-				if(waveexists(s3d.m5))
-					make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][t]
-					make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2)) /d Mat_5_unaligned = s3d.m5[p][q][r][3]
-					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_5_alignment, groupiD
-					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64} /MAXD={256,2048,2048} Mat_5_unaligned, groupiD
+	if(outputcy)
+		// At this point we have all the values that we need.  we could save the model now to disk, or load a model from disk at this point
+		// data to save to model file
+		// m1-m5 (if they exist)
+			// first three dimensions are the aligned component - should go into mat_(1-5)_alignment vectors field
+			// fourth dimension is the unaligned component should go into mat_(1-5)_unaligned scalar field
+		writeconfig(s3d,replacestring(".mov",replacestring(".mp4",moviepath,":"),":"),energymin, energymax,enstep)
+		variable h5file, groupid
+		HDF5CreateFile /p=cyrsoxspath/O h5file as parsefilepath(0,replacestring("mov",replacestring("mp4",moviepath,"hd5"),"hd5"),":",1,0)
+		HDF5CreateGroup h5file , "vector_morphology" , groupID
+		newdatafolder /o/s hd5output
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
+		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_alignment, groupiD
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_unaligned = s3d.m1[p][q][r][3]
+		hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_1_unaligned, groupiD
+		if(waveexists(s3d.m2))
+			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][t]
+			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2)) /d Mat_2_unaligned = s3d.m2[p][q][r][3]
+			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_alignment, groupiD
+			hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_2_unaligned, groupiD
+			if(waveexists(s3d.m3))
+				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][t]
+				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2)) /d Mat_3_unaligned = s3d.m3[p][q][r][3]
+				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_3_alignment, groupiD
+				hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_3_unaligned, groupiD
+				if(waveexists(s3d.m4))
+					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][t]
+					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2)) /d Mat_4_unaligned = s3d.m4[p][q][r][3]
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_4_alignment, groupiD
+					hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_4_unaligned, groupiD
+					if(waveexists(s3d.m5))
+						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][t]
+						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2)) /d Mat_5_unaligned = s3d.m5[p][q][r][3]
+						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_5_alignment, groupiD
+						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64} /MAXD={256,2048,2048} Mat_5_unaligned, groupiD
+					endif
 				endif
 			endif
 		endif
+		
+		newdatafolder /o/s igor_paramaters
+		
+		// parameters to save to parameter file 																				(*unique to Igor)
+		variable /g igorrotation =  s3d.rot // boolean saying if we are rotating the system or not (90 degrees is always included) 		* - this should be universal
+		variable /g igornum =  s3d.num // resolution of simulation (in each of the long axes of the film) 								* - the data itself should have this
+		variable /g igorthickness =  s3d.thickness // voxels of thickness along the beam direction 												* - the data itself should have this
+		variable /g igorvoxelsize =  s3d.voxelsize // the size of each pixel in the simulation (in nanometers) 									* - can be changed trivially, it is just a scaling parameter
+		variable /g igormaterialnum =  s3d.materialnum // number of materials																				* - can be read from materials list
+		string /g igorparamstring =  s3d.paramstring //specific parameters for creating density matricies according to the model				* - used for morphology creation
+		string /g igormodelname =  s3d.modelname //store the model name somewhere																	* - used for morphology creation
+		string /g igorpath =  s3d.path // the path to put important things for this calculation	
+		string /g igorname =  s3d.name // name of simulation
+		variable /g igormovie =  s3d.movie // are we doing a movie																					* - for visualization and some feedback
+		string /g igormaterials =  s3d.materials // list of materials
+		string /g igorefield =  s3d.efield // direction of efield - in the future, if combined with rotation, this doesn't need to be defined, maybe - all orientations will be calculated
+		setdatafolder ::
+		newdatafolder /o/s morphology_variables
+		make /o /n=3 film_normal = {1,0,0}
+		variable /g voxel_size_nm = s3d.voxelsize
+		string /g morphology_creator = "EG_"+s3d.modelname
+		string /g version = secs2date(datetime,-2)
+		string /g creation_date = secs2date(datetime,-2) +" " + secs2time(datetime,1)
+		string /g name = s3d.name
+		setdatafolder ::
+		
+		
+		HDF5CreateGroup h5file , "igor_parameters" , groupID
+		HDF5SaveGroup /L=7 /O /R igor_paramaters , h5file , "igor_parameters" 
+		HDF5CreateGroup h5file , "morphology_variables" , groupID
+		HDF5SaveGroup /L=7 /O /R morphology_variables , h5file , "morphology_variables" 
+		HDF5CloseFile h5file
+		
+		setdatafolder ::
+		
+		killdatafolder /z hd5output
 	endif
-	
-	newdatafolder /o/s igor_paramaters
-	
-	// parameters to save to parameter file 																				(*unique to Igor)
-	variable /g igorrotation =  s3d.rot // boolean saying if we are rotating the system or not (90 degrees is always included) 		* - this should be universal
-	variable /g igornum =  s3d.num // resolution of simulation (in each of the long axes of the film) 								* - the data itself should have this
-	variable /g igorthickness =  s3d.thickness // voxels of thickness along the beam direction 												* - the data itself should have this
-	variable /g igorvoxelsize =  s3d.voxelsize // the size of each pixel in the simulation (in nanometers) 									* - can be changed trivially, it is just a scaling parameter
-	variable /g igormaterialnum =  s3d.materialnum // number of materials																				* - can be read from materials list
-	string /g igorparamstring =  s3d.paramstring //specific parameters for creating density matricies according to the model				* - used for morphology creation
-	string /g igormodelname =  s3d.modelname //store the model name somewhere																	* - used for morphology creation
-	string /g igorpath =  s3d.path // the path to put important things for this calculation	
-	string /g igorname =  s3d.name // name of simulation
-	variable /g igormovie =  s3d.movie // are we doing a movie																					* - for visualization and some feedback
-	string /g igormaterials =  s3d.materials // list of materials
-	string /g igorefield =  s3d.efield // direction of efield - in the future, if combined with rotation, this doesn't need to be defined, maybe - all orientations will be calculated
-	setdatafolder ::
-	newdatafolder /o/s morphology_variables
-	make /o /n=3 film_normal = {1,0,0}
-	variable /g voxel_size_nm = s3d.voxelsize
-	string /g morphology_creator = "EG_"+s3d.modelname
-	string /g version = secs2date(datetime,-2)
-	string /g creation_date = secs2date(datetime,-2) +" " + secs2time(datetime,1)
-	string /g name = s3d.name
-	setdatafolder ::
-	
-	
-	HDF5CreateGroup h5file , "igor_parameters" , groupID
-	HDF5SaveGroup /L=7 /O /R igor_paramaters , h5file , "igor_parameters" 
-	HDF5CreateGroup h5file , "morphology_variables" , groupID
-	HDF5SaveGroup /L=7 /O /R morphology_variables , h5file , "morphology_variables" 
-	HDF5CloseFile h5file
-	
-	setdatafolder ::
-	
-	killdatafolder /z hd5output
-	
+	if(skipsim) // we will not be doing the simulation, we are done
+		addtologbook(s3d,"No Simulation will be done")
+		if(s3d.movie)
+			addtologbook(s3d,"Finishing Movie, and closing file")
+			//Print "Time : "+time2str(s3d.timesofar) +"  -  Finishing Movie, and closing file"
+			closemovie
+		endif
+		updatephase(s3d,"Complete")
+		s3d.progressbar=100
+		addtologbook(s3d,"Complete.")
+		return 1
+	endif
 	
 	
 	// make waves to store integrations and ratios
@@ -444,7 +463,7 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 	//setscale /p z,dimoffset(s3d.density1,2), dimdelta(s3d.density1,2), PZ3DSave
 	
 	variable en, j
-	variable enstep = (energymax-energymin)/(energynum-1)
+	
 	variable angle=0, anglestep=2 //(1 degree steps from 0 to 180) - 180 steps
 	if(!s3d.rot)
 		anglestep = 90
@@ -1731,13 +1750,15 @@ Function Model3DTabProc(tca) : TabControl
 			setvariable setmaxen,disable= (tab!=2)
 			setvariable setensteps,disable= (tab!=2)
 			setvariable setminen,disable= (tab!=2)
-			setvariable setefield,disable= (tab==2)+1
+			setvariable setefield,disable= (tab!=2)
 			CheckBox SaveMovieChk,disable= (tab!=2)
 			CheckBox Save2DDataEn,disable= (tab!=2) 
 			CheckBox rotatesystemck,disable= (tab!=2) 
 			CheckBox SaveQEn,disable= (tab!=2)
 			CheckBox SaveParaPerp,disable= (tab!=2)
 			CheckBox SaveAnisotropy,disable= (tab!=2)
+			CheckBox outputCYRSOXSchk,disable= (tab!=2)
+			CheckBox nosimchk,disable= (tab!=2)
 			svar controllist = root:Packages:ScatterSim3D:controllist
 			variable i
 			string controlname, controltype
@@ -1792,12 +1813,13 @@ function Model3DPanel()
 		svar funcnames, morphology, material, alignment, SimName, efield,controllist,extralist
 		nvar sizescale, thickness, resolution, startxrayenergy, endxrayenergy, numensteps, movie, voxelsize, usealignment, rotatesys
 		nvar alignmentsize, alignmentstrength, useprecalcalignment,SaveScattering1D, SaveParaPerp1D, SaveAnisotropic1D, SaveScattering2D
+		nvar outputcy, skipsim
 	else
 		string/g funcnames="", morphology="existing", material="pcbm", alignment="None", SimName = "test", efield = " ( 0 , 1 )"
 		string /g controllist="", extralist=""
 		variable /g sizescale=5, thickness=16, resolution=128, startxrayenergy=260, endxrayenergy=320, numensteps=600, movie=0, voxelsize=5
 		variable /g alignmentsize=10, alignmentstrength=1, useprecalcalignment=0, usemorphalignment=0
-		variable /g  SaveScattering1D=1, SaveParaPerp1D=1, SaveAnisotropic1D=1, SaveScattering2D=1, RotateSys=1
+		variable /g  SaveScattering1D=1, SaveParaPerp1D=1, SaveAnisotropic1D=1, SaveScattering2D=1, RotateSys=1, outputCy=1, skipsim=1
 	endif
 	make /n=(0,2)/o/t ListOfMaterials, ListColumnNames = {"\JCMaterial","\JCAlignment"}
 	make /n=(0,2)/o SelectedMaterials
@@ -1843,7 +1865,7 @@ function Model3DPanel()
 	CheckBox SaveQEn,variable= root:Packages:ScatterSim3D:SaveScattering1D
 	CheckBox Save2DDataEn,pos={234,121},size={187,14},disable=1,title="Save 2D Scattering Data vs Energy"
 	CheckBox Save2DDataEn,variable= root:Packages:ScatterSim3D:SaveScattering2D
-	CheckBox rotatesystemck,pos={234,137},size={187,14},disable=1,title="Integrate System rotated (best with periodic boundaries)"
+	CheckBox rotatesystemck,pos={119,140},size={187,14},disable=1,title="Integrate System rotated (best with periodic boundaries)"
 	CheckBox rotatesystemck,variable= root:Packages:ScatterSim3D:RotateSys
 	CheckBox SaveParaPerp,pos={234,88},size={206,14},disable=1,title="Save Parallel and Perpindicular 1D data"
 	CheckBox SaveParaPerp,variable= root:Packages:ScatterSim3D:SaveParaPerp1D
@@ -1858,12 +1880,16 @@ function Model3DPanel()
 	Button SimulateSystem,pos={253,455},size={210,47},proc=SimulateSystem,title="\\Z20Simulate System!"
 	SetVariable NameOfSim,pos={8,472},size={240,16},title="Name for Simulation :"
 	SetVariable NameOfSim,value= root:Packages:ScatterSim3D:SimName
-	SetVariable setefield,pos={30,163},size={300,16},disable=1,proc=SetEField,title="E Field ( y component, z component )"
+	SetVariable setefield,pos={28.00,391.00},size={300,19},disable=1,proc=SetEField,title="E Field ( y component, z component )"
 	SetVariable setefield,value= root:Packages:ScatterSim3D:efield
 	CheckBox usealign,pos={266,410},size={158,14},title="Use Pre Calculated Alignment"
 	CheckBox usealign,variable=useprecalcalignment,disable=1,proc=UserPreCalcChk
 	SetVariable SetSize1,pos={335,61},size={115,16},title="Voxel Size [nm]"
 	SetVariable SetSize1,limits={1,5000,1},value= root:packages:ScatterSim3D:voxelsize,live= 1
+	CheckBox outputCYRSOXSchk,pos={119.00,157.00},size={158.00,16.00},title="Output system for CyRSoXS"
+	CheckBox outputCYRSOXSchk,variable=outputcy,disable=1
+	CheckBox NoSimchk,pos={118.00,173.00},size={246.00,16.00},title="Skip the simulation.  Just create morphology"
+	CheckBox NoSimchk,variable=skipsim,disable=1
 	setdatafolder foldersave
 End
 function /s time2str2(secs)
@@ -2503,10 +2529,12 @@ Function SimulateSystem(ba) : ButtonControl
 			nvar rotatesys
 //			nvar useprecalcalignment
 			svar efield
+			nvar skipsim
+			nvar outputcy
 			string ycomp, zcomp
 			splitstring /e="^[( ]*([1234567890.]*)[^,]{0,5},[^,0.1]{0,5}([1234567890.]*)[) ]*" efield, ycomp, zcomp
 			newdatafolder /o/s $cleanupname(simname,0)
-			model3D(morphology,voxelsize,sizescale,resolution,thickness,paramstring,materialstring,alignmentstring,ycomp+","+zcomp,startxrayenergy,endxrayenergy,numensteps,movie = movie, save3d = savescattering2D, rotatesys = Rotatesys)
+			model3D(morphology,voxelsize,sizescale,resolution,thickness,paramstring,materialstring,alignmentstring,ycomp+","+zcomp,startxrayenergy,endxrayenergy,numensteps,movie = movie, save3d = savescattering2D, rotatesys = Rotatesys,outputcy=outputcy,skipsim=skipsim)
 			setdatafolder foldersave
 			break
 		case -1: // control being killed
