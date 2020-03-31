@@ -1030,7 +1030,7 @@ function sum3dsystem(s3d) // this sums all of the relative densities of all the 
 end
 
 function /s variables_spheres2()
-	return "Interpenetration [pixels],SetVariable,2;Minimum Seperation,SetVariable,.1;Number of Particles (Max),SetVariable,500;PolyDispursity (sigma of radiuses),setvariable,5;Noise,SetVariable,0;"
+	return "Interpenetration [pixels],SetVariable,2;Minimum Seperation,SetVariable,.1;Number of Particles (Max),SetVariable,500;PolyDispursity (sigma r),setvariable,5;Noise,SetVariable,0;"
 end
 function model3D_Spheres2(s3d)
 	//Creates a spherical system, with two components, aligned 
