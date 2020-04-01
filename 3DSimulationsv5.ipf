@@ -5016,6 +5016,21 @@ function writeconfig(s3d,configfolder, starten,enden,incen)
 		endfor
 		index++
 	endfor
+	
+	open /p=cyrsoxspath tempref as "run.sh"
+	fprintf tempref, "#!/bin/bash\n"
+	string twod = ""
+	string matn = ""
+	
+	if(s3d.thickness>1)
+		twod = "3d"
+	else
+		twod = "2d"
+	endif
+	
+	fprintf tempref, "/opt/cy-rsoxs/Cy-RSoXS-%dm-%s %s.hd5" , s3d.materialnum, twod, s3d.name
+	
+	
 	close /A
 			
 end
