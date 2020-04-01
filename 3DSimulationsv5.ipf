@@ -1030,7 +1030,7 @@ function sum3dsystem(s3d) // this sums all of the relative densities of all the 
 end
 
 function /s variables_spheres2()
-	return "Interpenetration [pixels],SetVariable,2;Minimum Seperation,SetVariable,.1;Number of Particles (Max),SetVariable,500;PolyDispursity (sigma of radiuses),setvariable,5;Noise,SetVariable,0;"
+	return "Interpenetration [pixels],SetVariable,2;Minimum Seperation,SetVariable,.1;Number of Particles (Max),SetVariable,500;PolyDispursity (sigma r),setvariable,5;Noise,SetVariable,0;"
 end
 function model3D_Spheres2(s3d)
 	//Creates a spherical system, with two components, aligned 
@@ -1817,7 +1817,7 @@ function Model3DPanel()
 	else
 		string/g funcnames="", morphology="existing", material="pcbm", alignment="None", SimName = "test", efield = " ( 0 , 1 )"
 		string /g controllist="", extralist=""
-		variable /g sizescale=5, thickness=16, resolution=128, startxrayenergy=260, endxrayenergy=320, numensteps=600, movie=0, voxelsize=5
+		variable /g sizescale=5, thickness=16, resolution=128, startxrayenergy=260, endxrayenergy=320, numensteps=601, movie=0, voxelsize=5
 		variable /g alignmentsize=10, alignmentstrength=1, useprecalcalignment=0, usemorphalignment=0
 		variable /g  SaveScattering1D=1, SaveParaPerp1D=1, SaveAnisotropic1D=1, SaveScattering2D=1, RotateSys=1, outputCy=1, skipsim=1
 	endif
