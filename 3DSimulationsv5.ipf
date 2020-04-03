@@ -1122,8 +1122,8 @@ function model3D_Spheres2(s3d)
 					// we are done adding spheres
 		endif
 		// subtract out this sphere from the matrix  // matrix starts at 1s, within this sphere, multiply this by 0, outside multiply by 1
-		multithread mat*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < radius^2 ? 0 : 1 
-		multithread exmat*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (orad+t)^2 ? 0 : 1 
+		multithread mat[min(0,cx-radius),max(thickness-1,cx+radius)][min(cy-radius,0),max(s3d.num-1,cy+radius)][min(cz-radius,0),max(s3d.num-1,cz+radius)]*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < radius^2 ? 0 : 1 
+		multithread exmat[min(0,cx-orad-30),max(thickness-1,cx+orad+30)][min(cy-orad-30,0),max(s3d.num-1,cy+orad+30)][min(cz-orad-30,0),max(s3d.num-1,cz+orad+30)][]*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (orad+t)^2 ? 0 : 1 
 		if(s3d.movie)
 			execute("ModifyGizmo /n=Spheres3D update=2")
 			doupdate
@@ -4921,8 +4921,6 @@ function model3D_hd5(s3d)
 	s3d.voxelsize = voxel_size_nm
 	svar morphology_creator
 	s3d.modelname = replacestring("EG_",morphology_creator,"")
-	svar name
-	s3d.name = name
 	
 	setdatafolder ::
 	
@@ -5027,8 +5025,8 @@ function writeconfig(s3d,configfolder, starten,enden,incen)
 	else
 		twod = "2d"
 	endif
-	
-	fprintf tempref, "/opt/cy-rsoxs/Cy-RSoXS-%dm-%s %s.hd5" , s3d.materialnum, twod, s3d.name
+	string name = parsefilepath(0,configfolder,":",1,0)
+	fprintf tempref, "/opt/cy-rsoxs/Cy-RSoXS-%dm-%s %s.hd5" , s3d.materialnum, twod, name
 	
 	
 	close /A
