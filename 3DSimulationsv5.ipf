@@ -437,7 +437,20 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		if(s3d.movie)
 			addtologbook(s3d,"Finishing Movie, and closing file")
 			//Print "Time : "+time2str(s3d.timesofar) +"  -  Finishing Movie, and closing file"
-			closemovie
+			DebuggerOptions
+			DebugEnab = V_debugOnError //check for debug on error
+			if (DebugEnab) //if it is on,
+				DebuggerOptions debugOnError=0 //turn it off
+			endif
+			try
+				closemovie;AbortOnRTE
+			catch
+				err = GetRTError(1)	
+				addtologbook(s3d,"No Frames added, no movie created!")
+			endtry
+			if(DebugEnab)
+				DebuggerOptions debugOnError=1
+			endif
 		endif
 		updatephase(s3d,"Complete")
 		s3d.progressbar=100
