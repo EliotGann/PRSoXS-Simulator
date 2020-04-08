@@ -1,8 +1,8 @@
 #pragma TextEncoding = "UTF-8"
 #pragma rtGlobals=1		// Use modern global access method.
 #include "opticalconstantsDB"
-//#include "fftstuff2"
-//#include "MCAlignment"
+#include <ImageSlider>
+#include <3DWaveDisplay>
 structure ThreeDSystem
 // parameter inputs
 	variable rot // boolean saying if we are rotating the system or not (90 degrees is always included) 
@@ -5059,3 +5059,814 @@ function writeconfig(s3d,configfolder, starten,enden,incen)
 			
 end
 
+function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
+	variable en
+	variable addtolayout
+	variable qpwr, doimage, removeen
+	string graphname
+	removeen  = paramIsDefault(removeen)? 0 : removeen
+	variable append2graph = !paramisdefault(graphname) // if supplied with graphname, appendtograph
+	qpwr = paramisdefault(qpwr)? 2:qpwr
+	addtolayout = paramisdefault(addtolayout) ? 0 : addtolayout
+	doimage = paramisdefault(doimage) ? 1 : doimage
+	
+	string foldersave = getdatafolder(1)
+	wave scatter3dsave = scatteringdata
+	string folder = getdatafolder(0)
+	wave enwave = envalues
+	if(!waveexists(scatter3dsave))
+		print "no scattering in this directory"
+		return ""
+	endif
+	if(!waveexists(enwave))
+		wave enwavedisp
+		if(!waveexists(enwavedisp))
+			print "no energy reference in directory"
+			return ""
+		endif
+		duplicate enwavedisp, enwave
+		deletepoints 0,1,enwave
+	endif
+	string scatname = cleanupname("Scatter"+num2str(en),0)
+	string scat1Dname = cleanupname("Scatter1D"+num2str(en),0)
+	string Para1Dname = cleanupname("Para1D"+num2str(en),0)
+	string Perp1Dname = cleanupname("Perp1D"+num2str(en),0)
+	
+	make /n=(1000,1000) /o $scatname
+	wave scatterdisp = $scatname
+	setscale /i x,-.2,.2, scatterdisp
+	setscale /i y,-.2,.2, scatterdisp
+	variable enstep = binarysearch(enwave,en)
+	scatterdisp = sqrt(x^2 +y^2) < .005 ? 0 : scatter3dsave(x)(y)[enstep]
+	matrixfilter /n=7 gauss scatterdisp
+	
+	wave/z scat1D = $scat1dname
+	wave/z para1D = $para1Dname
+	wave/z perp1d = $perp1Dname
+	
+	
+	if(!waveExists(scat1D))
+		radialintegratew(scatterdisp,0,90,scat1dname)
+		wave scat1D = $scat1dname
+		scat1D *=x^qpwr
+	endif
+	if(!waveexists(para1d))
+		radialintegratew(scatterdisp,0,20,para1Dname)
+		wave para1D = $para1Dname
+		para1D *=x^qpwr
+	endif
+	if(!waveexists(perp1d))
+		radialintegratew(scatterdisp,70,90,perp1Dname)
+		wave perp1d = $perp1Dname
+		perp1D *=x^qpwr
+	endif
+	string graphedtracenames
+	
+	wave scat1D = $scat1dname
+	string svname = cleanupname(folder+num2str(en),0)
+	string sgname = cleanupname(folder+"1D"+num2str(en),0)
+	if(append2graph)
+		dowindow $graphname
+		if(v_flag==0)
+			display /k=1 /n=$graphname
+			controlbar 25
+			Slider offsetslider,pos={3,9},size={150,16},proc=scatter1DSliderProc
+			Slider offsetslider,limits={0,3,0.01},vert=0,ticks=0,side=0,variable=offsetstep
+			PopupMenu colorscheme proc=hdfcolor_pop,pos={156,3},size={100,16},value="*COLORTABLEPOPNONAMES*"
+			
+		endif
+		wave /z testwave = traceNameToWaveRef(graphname,(folder + para1Dname))
+		if(waveexists(testwave))
+			removefromgraph /z /w=$graphname $(folder + para1Dname)
+			removefromgraph /z /w=$graphname $(folder + perp1Dname)
+			removefromgraph /z /w=$graphname $(folder + scat1Dname)
+			graphedtracenames = ""
+		else
+			graphedtracenames = (folder + perp1Dname) + "," + (folder + para1Dname) + "," + (folder + scat1dname)
+		endif
+		
+		if(removeen)
+			//we are done, return the elements which were removed
+			return (folder + perp1Dname) + "," + (folder + para1Dname) + "," + (folder + scat1dname)
+		endif
+		appendtograph /w=$graphname perp1D /tn=$(folder + perp1Dname)
+		appendtograph /w=$graphname para1D /tn=$(folder + para1Dname)
+		appendtograph /w=$graphname scat1d /tn=$(folder + scat1dname)
+	else
+		dowindow /k $sgname
+		display /W=(887,57,1623,553)/n=$sgname /k=1 para1D, perp1D, scat1d as (folder + " " + num2str(en) + " eV 1D Scattering")
+		SetAxis /w=$sgname /A=2 left //0.00001,50
+		SetAxis /w=$sgname bottom 0.02,1
+		ModifyGraph /w=$sgname mode($para1Dname)=7,useNegPat($para1Dname)=1,toMode($para1Dname)=1,hbFill($para1Dname)=2,hBarNegFill($para1Dname)=2,rgb($para1Dname)=(0,0,65535)
+		ModifyGraph /w=$sgname rgb($scat1dname)=(0,0,0),lsize($para1Dname)=0,lsize($perp1Dname)=0,lsize($scat1dname)=2,log=1
+		ModifyGraph /w=$sgname grid=1,tick=2,gfSize=20,axThick=2,standoff=0,gridStyle=3,gridRGB=(43690,43690,43690),useNegRGB($para1Dname)=1,usePlusRGB($para1Dname)=1,plusRGB=(65535,0,0),negRGB($para1Dname)=(3,1,52428)
+	endif
+	if(doimage)
+		dowindow /k $svname
+		display /k=1 /n=$svname /W=(40,45,486,479) as (folder + " " + num2str(en) + " eV 2D Scattering")
+		appendimage /w=$svname scatterdisp
+		SetAxis /w=$svname left -0.2,0.2
+		SetAxis /w=$svname bottom -0.2,0.2
+		ModifyImage /w=$svname $scatname ctab= {0,*,Terrain,0}
+		ModifyGraph /w=$svname height={Plan,1,left,bottom}
+		TextBox/w=$svname/C/N=text1/F=0/A=LT/X=10.00/Y=10.00/B=1/G=(0,0,0) "\\F'Arial Black'\\Z20"+num2str(en)+" eV"
+		setdatafolder foldersave
+	endif	
+	if(addtolayout && !append2graph)
+		appendlayoutobject /F=0 graph $svname
+		appendlayoutobject /F=0 graph $sgname
+		dowindow /HIDE=1 $svname
+		dowindow /HIDE=1 $sgname
+	endif
+	return graphedtracenames
+end
+Function MakeEdgesWave(centers, edgesWave)
+	Wave centers	// Input
+	Wave edgesWave	// Receives output
+	
+	Variable N=numpnts(centers)
+	Redimension/N=(N+1) edgesWave
+
+	edgesWave[0]=centers[0]-0.5*(centers[1]-centers[0])
+	edgesWave[N]=centers[N-1]+0.5*(centers[N-1]-centers[N-2])
+	edgesWave[1,N-1]=centers[p]-0.5*(centers[p]-centers[p-1])
+End
+
+function doratiographhdf([addtolayout])
+	variable addtolayout
+	addtolayout = paramisdefault(addtolayout) ? 0 : addtolayout
+	wave ratio3dvsen, int3dvsen
+	wave envalues
+	duplicate /o envalues, enwavedisp
+	MakeEdgesWave(envalues, enwavedisp)
+	
+	string folder = getdatafolder(0)
+	duplicate/o ratio3dvsen, ratio3dtemp
+	dowindow /k $("ratiograph_"+folder)
+	Display /W=(103,49,476,547)/k=1 /n=$("ratiograph_"+folder)
+	AppendImage/T ratio3dtemp vs {*,enwavedisp}
+	ModifyImage ratio3dtemp ctab= {-1,1,RedWhiteBlue,0}
+	ModifyGraph margin(left)=43,margin(bottom)=9,margin(top)=28,margin(right)=9,gfSize=14
+	ModifyGraph nticks(top)=8
+	ModifyGraph standoff=0
+	ModifyGraph tlOffset=-2
+	Label left "X-ray Energy [eV]"
+	SetAxis/R left 275,295
+	SetAxis top 0.01,1
+	smooth 5, ratio3dtemp
+	ModifyGraph log(top)=1
+	ModifyGraph mirror=2
+	ModifyGraph minor=1
+	ModifyGraph fSize=8
+	ModifyGraph standoff=0
+	ModifyGraph btLen=3
+	ModifyGraph tlOffset=-2
+	ModifyImage ratio3dtemp ctab= {-1,1,RedWhiteBlue,0}
+	ModifyGraph fSize=0
+	ModifyGraph gfSize=14
+	ModifyGraph tkLblRot=0
+	ModifyGraph nticks(left)=6
+	ModifyGraph tick=2,btLen=5
+	ModifyGraph ftLen(left)=5
+	ModifyGraph sep(left)=2
+	dowindow /k $("Ingraph_"+folder)
+	Display /W=(103,49,476,547)/k=1 /n=$("Ingraph_"+folder)
+	appendimage/T int3DvsEn vs {*,enwavedisp}
+	ModifyImage int3DvsEn ctab= {.001,*,YellowHot,0},log=1
+	ModifyGraph log(top)=1
+	SetAxis top 0.015,1
+	SetAxis/R left 275,295
+	if(addtolayout)
+		appendlayoutobject /F=0 graph $("ratiograph_"+folder)
+		appendlayoutobject /F=0 graph $("Ingraph_"+folder)
+		dowindow /HIDE=1 $("Ingraph_"+folder)
+		dowindow /HIDE=1 $("ratiograph_"+folder)
+	endif
+	
+end
+
+function /wave radialintegratehdf(wave1,minangle,maxangle,qmin,qmax,qnum,outputwavename)
+	wave wave1 // input wave to integrate (typically a 2d scattering pattern)
+	variable maxangle,minangle // between 0 and 90  ie 80 and 90 will select vertical 20 degrees
+							// and likewise, 0 and 10 will collect horizontal 20 degrees
+							variable qmin, qmax, qnum
+	string outputwavename
+	variable centx=0, centy=0
+	if(numpnts(wave1)<10)
+		make /o /n=0 outputwave
+		return outputwave
+	endif
+	duplicate /o wave1,radialdistance,mask, maskeddata
+	//mask = abs(atan((centy-y)/(centx-x))) <maxangle*pi/180 && abs(atan((centy-y)/(centx-x))) >minangle*pi/180 ? 1 : nan
+	mask = wave1[p][q]*0==0 && ((atan((centy-y)/(centx-x)) <maxangle*pi/180 && atan((centy-y)/(centx-x)) >minangle*pi/180) || ( (atan((centy-y)/(centx-x)) < (maxangle-180)*pi/180) && (atan((centy-y)/(centx-x)) > (minangle-180)*pi/180) )  ) ? 1 : nan
+	radialdistance = sqrt((centx-x)^2 + (centy-y)^2)
+	maskeddata *= mask
+	radialdistance *= mask
+	redimension/n=(numpnts(wave1)) maskeddata
+	redimension/n=(numpnts(wave1)) radialdistance
+	wavetransform zapnans maskeddata
+	wavetransform zapnans radialdistance
+	
+	make /d/o $outputwavename , npoints // make the output wave (the reference to which will be returned)
+	wave outputwave = $outputwavename
+	outputwave = 0
+	npoints = 0
+	Histogram /B={qmin,(qmax-qmin)/qnum,qnum} /c radialdistance, npoints
+	Histogram  /B={qmin,(qmax-qmin)/qnum,qnum} /c /w=maskeddata radialdistance, outputwave
+	outputwave /=npoints
+	setscale /i x,qmin,qmax, outputwave
+	return outputwave
+end
+
+Function scatter3DSliderProc(name, value, event)
+	String name			// name of this slider control
+	Variable value		// value of slider
+	Variable event		// bit field: bit 0: value set; 1: mouse down, //   2: mouse up, 3: mouse moved 4:energy set
+
+	String dfSav= GetDataFolder(1)
+	String grfName= WinName(0, 1)
+	SetDataFolder root:Packages:WM3DImageSlider:$(grfName)
+
+	NVAR gLayer
+	Nvar envalue
+	SVAR imageName
+	wave envalues
+	if(event&16) // energy was set
+		glayer = binarysearchinterp(envalues,envalue)
+	endif
+	envalue = envalues[glayer]
+	ModifyImage  $imageName plane=(gLayer)	
+	SetDataFolder dfSav
+
+	// 08JAN03 Tell us if there is an active LineProfile
+	SVAR/Z imageGraphName=root:Packages:WMImProcess:LineProfile:imageGraphName
+	if(SVAR_EXISTS(imageGraphName))
+		if(cmpstr(imageGraphName,grfName)==0)
+			ModifyGraph/W=$imageGraphName offset(lineProfileY)={0,0}			// This will fire the S_TraceOffsetInfo dependency
+		endif
+	endif	
+		
+	SVAR/Z imageGraphName=root:Packages:WMImProcess:ImageThreshold:ImGrfName
+	if(SVAR_EXISTS(imageGraphName))
+		if(cmpstr(imageGraphName,grfName)==0)
+			WMImageThreshUpdate()
+		endif
+	endif
+	
+	return 0				// other return values reserved
+End
+
+//*******************************************************************************************************
+
+Function scatter3DAppend3DImageSlider(wave enwavein)
+	String grfName= WinName(0, 1)
+	DoWindow/F $grfName
+	if( V_Flag==0 )
+		return 0			// no top graph, exit
+	endif
+
+
+	String iName= WMTopImageGraph()		// find one top image in the top graph window
+	if( strlen(iName) == 0 )
+		DoAlert 0,"No image plot found"
+		return 0
+	endif
+	
+	Wave w= $WMGetImageWave(iName)	// get the wave associated with the top image.	
+	if(DimSize(w,2)<=0)
+		DoAlert 0,"Need a 3D image"
+		return 0
+	endif
+	
+	ControlInfo WM3DAxis
+	if( V_Flag != 0 )
+		return 0			// already installed, do nothing
+	endif
+	
+	String dfSav= GetDataFolder(1)
+	NewDataFolder/S/O root:Packages
+	NewDataFolder/S/O WM3DImageSlider
+	NewDataFolder/S/O $grfName
+	duplicate /o enwavein, envalues
+	// 09JUN10 Variable/G gLeftLim=0,gRightLim=DimSize(w,2)-1,gLayer=0
+	Variable/G gLeftLim=0,gRightLim,gLayer=0, envalue = envalues[0]
+	if((DimSize(w,3)>0 && (dimSize(w,2)==3 || dimSize(w,2)==4)))		// 09JUN10; will also support stacks with alpha channel.
+		gRightLim=DimSize(w,3)-1					//image is 4D with RGB as 3rd dim
+	else
+		gRightLim=DimSize(w,2)-1					//image is 3D grayscale
+	endif
+	
+	String/G imageName=nameOfWave(w)
+	ControlInfo kwControlBar
+	Variable/G gOriginalHeight= V_Height		// we append below original controls (if any)
+	ControlBar gOriginalHeight+30
+	
+	GetWindow kwTopWin,gsize
+	
+	Slider WM3DAxis,pos={V_left+10,gOriginalHeight+9},size={V_right-V_left-kImageSliderLMargin,16},proc=scatter3DSliderProc
+	// uncomment the following line if you want do disable live updates when the slider moves.
+	// Slider WM3DAxis live=0	
+	Slider WM3DAxis,limits={0,gRightLim,1},value= 0,vert= 0,ticks=0,side=0,variable=gLayer	
+	
+	SetVariable WM3DVal,pos={V_right-kImageSliderLMargin+15,gOriginalHeight+2},size={60,14}
+	SetVariable WM3DVal,limits={0,INF,0.1},title=" ",proc=scatter3DSliderSetVarProc
+	
+	String cmd
+	sprintf cmd,"SetVariable WM3DVal,value=%s",GetDataFolder(1)+"envalue"
+	Execute cmd
+
+	ModifyImage $imageName plane=0
+	// 
+	WaveStats/Q w
+	ModifyImage $imageName ctab= {V_min,V_max,,0}	// missing ctb to leave it unchanced.
+	
+	SetDataFolder dfSav
+End
+
+//*******************************************************************************************************
+Function scatter3DSliderSetVarProc(sva) : SetVariableControl
+	STRUCT WMSetVariableAction &sva
+
+	switch( sva.eventCode )
+		case 1: // mouse up
+		case 2: // Enter key
+		// comment the following line if you want to disable live updates.
+		case 3: // Live update
+			Variable dval = sva.dval
+			scatter3DSliderProc("",0,16)
+			break
+	endswitch
+
+	return 0
+End
+//*******************************************************************************************************
+
+
+function /wave load_CV_HDF5_into_wave([pathbase])
+	string pathbase
+	if(paramisdefault(pathbase))
+		newpath /M="Path for simulation results"/O/Q/Z simulationpath
+		if(v_flag)
+			print "bad path entered, stopping"
+		endif
+		pathinfo simulationpath
+		pathbase = s_path
+	endif
+	if(!stringmatch(parseFilePath(0,pathbase,":",1,0),"HDF5"))
+		pathbase = removeending(pathbase,":")+":HDF5:"
+	endif
+	newpath /M="Path for simulation results"/O/Q/Z simulationpath , pathbase
+	pathinfo simulationpath
+	string simname = parsefilepath(0,s_path,":",1,1)
+	string hdffilenamelist = sortlist(indexedfile(simulationpath, -1, ".h5"))
+	variable numfiles = itemsinlist(HDFfilenamelist)
+
+	string teststring
+	variable physsize, qnum
+	grep /q/list/p=simulationpath/E={"NumX",0} "::config.txt"
+	splitstring /E="NumX = ([^;]*);" S_value, teststring
+	qnum = str2num(teststring)
+	grep /q/list/p=simulationpath/E={"PhysSize",0} "::config.txt"
+	splitstring /E="PhysSize = ([^;]*);" S_value, teststring
+	physsize = str2num(teststring)
+	if(qnum*physsize*0!=0)
+		print "invalid config file"
+		make/n=0/o result
+		return result
+	endif
+	string foldersave = getdataFolder(1)
+	setdatafolder root:
+	newdatafolder /o/s Packages
+	newdatafolder /o/s HDFdata
+	svar /z listofendef, colortabdef
+	nvar /z offsetstepdef
+	newdatafolder /o/s $simname
+	make /o/n=(qnum, qnum, numfiles) /s scatteringdata
+	make /o/n=(numfiles) Envalues
+	setscale /i x,-pi/physsize,pi/physsize, scatteringdata
+	setscale /i y,-pi/physsize,pi/physsize, scatteringdata
+	variable j, hdfref
+	string filename,enstr
+	if(svar_Exists(listofendef))
+		string /g listofen
+		listofen = listofendef
+	endif
+	if(svar_Exists(colortabdef))
+		string /g colortab
+		colortab = colortabdef
+	endif
+	if(nvar_Exists(offsetstepdef))
+		variable /g offsetstep
+		offsetstep = offsetstepdef
+	endif
+		
+	make/d/o/n=(floor(qnum/(2*sqrt(2))),numfiles) int3DvsEn=0,ratio3DvsEn=0, para3dvsen, perp3dvsen
+
+
+	setscale /i x, 0,pi/physsize, int3DvsEn,ratio3DvsEn, para3dvsen, perp3dvsen
+	setscale /i y, wavemin(envalues), wavemax(envalues), int3DvsEn,ratio3DvsEn, para3dvsen, perp3dvsen
+	
+	
+	variable ey =0
+	variable ez =1
+	variable pe = atan(ey/ez)*180/pi
+	variable pa = atan(-ez/ey)*180/pi
+	
+	
+	
+	for(j=0;j<numfiles;j++)
+		filename = stringfromlist(j,hdffilenamelist)
+		HDF5OpenFile /p=simulationpath /R hdfref as filename
+		HDF5Loaddata/o/q/n=loadeddata hdfref, "/projection"
+		HDF5CloseFile hdfref
+		wave loadeddata
+		scatteringdata[][][j] = loadeddata[p][q]
+		setscale /i y,-pi/physsize,pi/physsize, loadeddata
+		setscale /i x,-pi/physsize,pi/physsize, loadeddata
+		splitstring /e="^Energy_(.*).h5$" filename, enstr
+		Envalues[j] = str2num(enstr)
+		
+		wave int3dp0 = radialintegratehdf(loadeddata,0,90,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0")
+		wave int3dp0para = radialintegratehdf(loadeddata,pa-20,pa+20,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0para")
+		wave int3dp0perp = radialintegratehdf(loadeddata,pe-20,pe+20,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0perp")
+		int3DvsEn[][j] =  int3dp0[p] * x^2
+		ratio3DvsEn[][j] = (int3dp0para[p] - int3dp0perp[p]) / (int3dp0para[p] + int3dp0perp[p])
+		perp3Dvsen[][j] =  int3dp0perp[p]
+		para3Dvsen[][j] = int3dp0para[p]
+	endfor
+	doratiographhdf()
+	newimage /k=1 /n=$cleanupname(simname,0) scatteringdata
+	doupdate
+	controlbar 46
+	Button addenergy,pos={150,3},size={120,20},disable=0,proc=addenergy_but,title="Add to 1D Plot"
+	Button Removeenergy,pos={150,23},size={120,20},disable=0,proc=removeenergy_but,title="Remove from Plot"
+	Button savedef,pos={3,3},size={120,20},disable=0,proc=savehdfdef_but,title="Save as Default"
+	Button Applydef,pos={3,23},size={120,20},disable=0,proc=Applyhdfdef_but,title="Apply Default"
+	scatter3DAppend3DImageSlider(envalues)
+	
+	modifyimage scatteringdata ctab={0.1,1000,Terrain,0},log=1
+	modifygraph height={Plan,1,left,top}
+	updateenplot(getdatafolderDFR())
+	applydefhdf(getdatafolderDFR())
+	updateenplot(getdatafolderDFR())
+	setdatafolder foldersave
+end
+
+function updateenplot(dfrEF folder)
+	string foldersave = getdatafolder(1)
+	setdatafolder folder
+	
+	svar /z listoftraces, colortab, listofen, plottedens
+	nvar /z offsetstep
+	if(!svar_Exists(listoftraces))
+		string /g listoftraces =""
+	endif
+	if(!svar_Exists(plottedens))
+		string /g plottedens =""
+	endif
+	if(!svar_Exists(listofen))
+		string /g listofen =""
+	endif
+	listofen = sortlist(listofen)
+	if(!nvar_Exists(offsetstep))
+		variable /g offsetstep = 0
+	endif
+	if(!svar_Exists(colortab))
+		string /g colortab ="YellowHot"
+	endif
+	variable j, en, offsetsteplog = 10^offsetstep
+	string newtraces = ""
+	string graphname = getdatafolder(0)+"_1D"
+	variable replot = 0
+	dowindow $graphname
+	if(v_flag==0)
+		replot = 1
+		listoftraces = ""
+	endif	
+	for(j=0;J<itemsinlist(listofen);j++)
+		en = str2num(stringfromlist(j,listofen))
+		dowindow $graphname
+		if(replot)
+			newtraces = scatterimagehdf(en,graphname=graphname, doimage=0)
+		elseif(findlistitem(num2str(en),plottedens)<0)
+			newtraces = scatterimagehdf(en,graphname=graphname, doimage=0)
+		else
+			newtraces = ""
+		endif
+		if(strlen(newtraces)>3 && findlistitem(newtraces,listoftraces)<0)
+			listoftraces = addlistitem(newtraces,listoftraces)
+		endif
+	endfor
+	for(j=0;j<itemsinlist(plottedens);j++)
+		en = str2num(stringfromList(j,plottedens))
+		if(findlistitem(num2str(en),listofen)<0)
+			string removedplots = scatterimagehdf(en,removeen=1,graphname=graphname, doimage=0)
+			listoftraces = removefromlist(removedplots,listoftraces)
+			
+		endif
+	endfor
+	listoftraces = sortlist(listoftraces)
+	plottedens = listofen
+	variable offset = 1
+	
+	Variable numTraces =itemsinlist(listoftraces)
+	if (numTraces <= 0)
+		Killwindow /Z $graphname
+		return -1
+	endif
+	
+	variable numtracesden=numtraces
+	if( numTraces < 2 )
+		numTracesden= 2	// avoid divide by zero, use just the first color for 1 trace
+	endif
+	ColorTab2Wave $colortab
+	variable cmode = whichlistitem(colortab,ctablist())
+	PopupMenu colorscheme mode = cmode+1
+	wave RGB = M_colors
+	Variable numRows= DimSize(rgb,0)
+	Variable red, green, blue
+	Variable index, i
+	string paname, pename, rname
+	for(i=0; i<numTraces; i+=1)
+		index = round(i/(numTracesden-1) * (numRows*2/3-1))	// spread entire color range over all traces.
+		red = rgb[index][0]
+		green = rgb[index][1]
+		blue =  rgb[index][2]
+		pename = stringfromlist(0,stringfromlist(i,listoftraces),",")
+		paname = stringfromlist(1,stringfromlist(i,listoftraces),",")
+		rname = stringfromlist(2,stringfromlist(i,listoftraces),",")
+				
+		ModifyGraph /w=$graphname log=1
+		ModifyGraph /w=$graphname mode($pename)=7,hbFill($pename)=5,useNegPat($pename)=1,hBarNegFill($pename)=3,toMode($pename)=1
+		modifygraph /w=$graphname rgb($paname) = (red,green,blue)
+		modifygraph /w=$graphname rgb($pename) = (red,green,blue)
+		modifygraph /w=$graphname rgb($rname) = (red,green,blue)
+		modifygraph /w=$graphname muloffset($paname)={0,offset}
+		modifygraph /w=$graphname muloffset($pename)={0,offset}
+		modifygraph /w=$graphname muloffset($rname)={0,offset}
+		
+		offset *= offsetsteplog
+	endfor
+	
+	setdatafolder foldersave
+end
+
+Function addenergy_but(ba) : ButtonControl
+	STRUCT WMButtonAction &ba
+
+	switch( ba.eventCode )
+		case 2: // mouse up
+			dfref folderref = getwavesDataFolderDFR(imagenametowaveref("",stringfromlist(0,imageNameList("",";"))))
+			dfref foldersave = getdatafolderdfr()
+			setdatafolder folderref
+			svar /z listofen
+			controlinfo WM3DVal
+			if(svar_exists(listofen))
+				listofen = addlistitem(num2str(v_value),listofen)
+			else
+				string /g listofen
+				listofen = num2str(v_value) + ";"
+			endif
+			updateenplot(folderref)
+			setdatafolder foldersave
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
+
+
+Function removeenergy_but(ba) : ButtonControl
+	STRUCT WMButtonAction &ba
+
+	switch( ba.eventCode )
+		case 2: // mouse up
+			dfref folderref = getwavesDataFolderDFR(imagenametowaveref("",stringfromlist(0,imageNameList("",";"))))
+			dfref foldersave = getdatafolderdfr()
+			setdatafolder folderref
+			svar /z listofen
+			controlinfo WM3DVal
+			if(svar_exists(listofen))
+				listofen = removefromlist(num2str(v_value),listofen)
+			else
+				string /g listofen=""
+			endif
+			updateenplot(folderref)
+			setdatafolder foldersave
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
+
+function Applyhdfdef_but(ba) : ButtonControl
+	STRUCT WMButtonAction &ba
+
+	switch( ba.eventCode )
+		case 2: // mouse up
+			dfref folderref = getwavesDataFolderDFR(imagenametowaveref("",stringfromlist(0,imageNameList("",";"))))
+			applydefhdf(folderref)
+			updateenplot(folderref)
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
+
+
+
+Function savehdfdef_but(ba) : ButtonControl
+	STRUCT WMButtonAction &ba
+
+	switch( ba.eventCode )
+		case 2: // mouse up
+			dfref folderref = getwavesDataFolderDFR(imagenametowaveref("",stringfromlist(0,imageNameList("",";"))))
+			dfref foldersave = getdatafolderdfr()
+			setdatafolder folderref
+			svar /z colortab, listofen
+			nvar /z offsetstep
+			if(!svar_exists(colortab) || !svar_exists(listofen) || !nvar_Exists(offsetstep))
+				break
+			endif
+			string  simname = getdatafolder(0)
+			setdatafolder ::			
+			string/g listofendef = listofen
+			string/g colortabdef = colortab
+			variable /g offsetstepdef = offsetstep
+			
+			getaxis /q/w=$(simname+"_1D") bottom
+			if(v_flag==0)
+				variable /g minq1d = v_min
+				variable /g maxq1d = v_max
+			endif
+			getaxis /q/w=$(simname+"_1D") left
+			if(v_flag==0)
+				variable /g mini1d = v_min
+				variable /g maxi1d = v_max
+			endif
+
+			string /g ctab2d
+			splitstring /e="ctab= {([^}]*)" imageinfo(simname,"#0",0),ctab2d
+			
+			getaxis /q/w=$simname top
+			if(v_flag==0)
+				variable /g minqx2d = v_min
+				variable /g maxqx2d = v_max
+			endif
+			getaxis /q/w=$simname left
+			if(v_flag==0)
+				variable /g minqy2d = v_min
+				variable /g maxqy2d = v_max
+			endif
+			getaxis /q/w=$("ratiograph_"+simname) top
+			if(v_flag==0)
+				variable /g minqratio = v_min
+				variable /g maxqratio = v_max
+			endif
+			getaxis /q/w=$("ratiograph_"+simname) left
+			if(v_flag==0)
+				variable /g minenratio = v_min
+				variable /g maxenratio = v_max
+			endif
+			string /g ctabratio
+			splitstring /e="ctab= {([^}]*)" imageinfo("ratiograph_"+simname,"#0",0),ctabratio
+			string /g ctabin
+			splitstring /e="ctab= {([^}]*)" imageinfo("Ingraph_"+simname,"#0",0),ctabin
+			
+			//updateenplot(folderref)
+			setdatafolder foldersave
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
+
+
+
+Function scatter1DSliderProc(sa) : SliderControl
+	STRUCT WMSliderAction &sa
+
+	switch( sa.eventCode )
+		case -3: // Control received keyboard focus
+		case -2: // Control lost keyboard focus
+		case -1: // Control being killed
+			break
+		default:
+			if( sa.eventCode & 1 ) // value set
+				dfref folderref = getwavesDataFolderDFR(tracenameToWaveRef("",stringfromlist(0,tracenamelist("",";",1))))
+				updateenplot(folderref)
+				Variable curval = sa.curval
+			endif
+			break
+	endswitch
+
+	return 0
+End
+
+Function hdfcolor_pop(pa) : PopupMenuControl
+	STRUCT WMPopupAction &pa
+
+	switch( pa.eventCode )
+		case 2: // mouse up
+			Variable popNum = pa.popNum
+			String popStr = pa.popStr
+			dfref folderref = getwavesDataFolderDFR(tracenameToWaveRef("",stringfromlist(0,tracenamelist("",";",1))))
+			dfref foldersave = getdatafolderdfr()
+			setdatafolder folderref
+			svar colortab
+			colortab = popstr
+			updateenplot(folderref)
+			setdatafolder foldersave
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
+
+
+
+function applydefhdf(dfref folder)
+	dfref foldersave = getdatafolderdfr()
+	setdatafolder folder
+	string /g colortab, listofen
+	variable/g offsetstep
+	string  simname = getdatafolder(0)
+	setdatafolder ::
+	svar /z listofendef
+	if(svar_Exists(listofendef))
+		listofen = listofendef
+	endif
+	svar /z colortabdef
+	if(svar_Exists(colortabdef))
+		colortab = colortabdef
+	endif
+	nvar /z offsetstepdef
+	if(nvar_Exists(offsetstepdef))
+		offsetstep = offsetstepdef
+	endif
+	
+	nvar /z minq1d
+	nvar /z maxq1d
+	if(nvar_exists(minq1d))
+		setaxis /w=$(simname+"_1D") bottom, minq1d, maxq1d
+	endif
+	
+	nvar /z mini1d
+	nvar /z maxi1d
+	if(nvar_exists(mini1d))
+		setaxis /w=$(simname+"_1D") left, mini1d, maxi1d
+	endif
+
+	nvar /z minqx2d
+	nvar /z maxqx2d
+	if(nvar_exists(minqx2d))
+		setaxis /w=$simname top, minqx2d, maxqx2d
+	endif
+	
+	nvar /z minqy2d
+	nvar /z maxqy2d
+	if(nvar_exists(minqy2d))
+		setaxis /w=$simname left, minqy2d, maxqy2d
+	endif
+	
+	nvar /z minqratio
+	nvar /z maxqratio
+	if(nvar_exists(minqx2d))
+		setaxis /w=$("ratiograph_"+simname) top, minqratio, maxqratio
+		setaxis /w=$("Ingraph_"+simname) top, minqratio, maxqratio
+	endif
+	
+	nvar /z minenratio
+	nvar /z maxenratio
+	if(nvar_exists(minenratio))
+		setaxis /w=$("ratiograph_"+simname) left, minenratio, maxenratio
+		setaxis /w=$("Ingraph_"+simname) left, minenratio, maxenratio
+	endif
+	
+	svar /z ctab2d
+	if(svar_exists(ctab2d))
+		execute /q/z ("modifyimage /w="+simname+" ''#0 ctab = {"+ctab2d+"}")
+	endif
+	
+	svar /z ctabratio
+	if(svar_exists(ctabratio))
+		execute /q/z ("modifyimage /w=ratio_"+simname+" ''#0 ctab = {"+ctabratio+"}")
+	endif
+	
+	svar /z ctabin
+	if(svar_exists(ctabin))
+		execute /q/z ("modifyimage /w=Ingraph_"+simname+" ''#0 ctab = {"+ctabin+"}")
+	endif
+	updateenplot(folder)
+	setdatafolder foldersave
+end
