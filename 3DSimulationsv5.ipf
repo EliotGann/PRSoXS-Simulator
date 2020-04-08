@@ -1916,8 +1916,8 @@ function Model3DPanel()
 	CheckBox outputCYRSOXSchk,variable=outputcy,disable=1
 	CheckBox NoSimchk,pos={118.00,173.00},size={246.00,16.00},title="Skip the simulation.  Just create morphology"
 	CheckBox NoSimchk,variable=skipsim,disable=1
-	Button Analyze_Sim,pos={149,481},size={96,22},proc=SimulateSystem,title="\\Z20Analyze"
-	Button Analyze_HDF,pos={9,481},size={132,22},proc=SimulateSystem,title="\\Z20Analyze HDFs"
+	Button Analyze_Sim,pos={149,481},size={96,22},proc=Analyze_sim_but,title="\\Z20Analyze"
+	Button Analyze_HDF,pos={9,481},size={132,22},proc=Analyze_HDF_but,title="\\Z20Analyze HDFs"
 	setdatafolder foldersave
 End
 function /s time2str2(secs)
@@ -5096,8 +5096,8 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	
 	make /n=(1000,1000) /o $scatname
 	wave scatterdisp = $scatname
-	setscale /i x,-.2,.2, scatterdisp
-	setscale /i y,-.2,.2, scatterdisp
+	setscale /p x,dimoffset(scatter3dsave,0),dimdelta(scatter3dsave,0), scatterdisp
+	setscale /p y,dimoffset(scatter3dsave,0),dimdelta(scatter3dsave,0), scatterdisp
 	variable enstep = binarysearch(enwave,en)
 	scatterdisp = sqrt(x^2 +y^2) < .005 ? 0 : scatter3dsave(x)(y)[enstep]
 	matrixfilter /n=7 gauss scatterdisp
@@ -5109,28 +5109,28 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	wave/z perp1d = $perp1Dname
 	
 	
-	wave/z int3DvsEn
-	wave/z perp3Dvsen
-	wave/z para3Dvsen
-	
-	if(!waveExists(scat1D) && waveexists(int3DvsEn))
-		make /n=(dimsize(int3dvsen,0)) $scat1dname
-		wave scat1D = $scat1dname
-		scat1D = int3dvsen[p][binarysearchinterp(enwave,en)]
-		setscale /p x,dimoffset(int3dvsen,0),dimdelta(int3dvsen,0), scat1d 
-	endif
-	if(!waveexists(para1d) && waveexists(para3DvsEn))
-		make /n=(dimsize(int3dvsen,0)) $para1Dname
-		wave para1d = $para1Dname
-		para1d = para3DvsEn[p][binarysearchinterp(enwave,en)]
-		setscale /p x,dimoffset(para3DvsEn,0),dimdelta(para3DvsEn,0), para1d 
-	endif
-	if(!waveexists(perp1d) && waveexists(perp3DvsEn))
-		make /n=(dimsize(perp3DvsEn,0)) $perp1Dname
-		wave perp1d = $perp1Dname
-		perp1d = perp3DvsEn[p][binarysearchinterp(enwave,en)]
-		setscale /p x,dimoffset(perp3DvsEn,0),dimdelta(perp3DvsEn,0), perp1d 
-	endif
+//	wave/z int3DvsEn
+//	wave/z perp3Dvsen
+//	wave/z para3Dvsen
+//	
+//	if(!waveExists(scat1D) && waveexists(int3DvsEn))
+//		make /n=(dimsize(int3dvsen,0)) $scat1dname
+//		wave scat1D = $scat1dname
+//		scat1D = int3dvsen[p][binarysearchinterp(enwave,en)]
+//		setscale /p x,dimoffset(int3dvsen,0),dimdelta(int3dvsen,0), scat1d 
+//	endif
+//	if(!waveexists(para1d) && waveexists(para3DvsEn))
+//		make /n=(dimsize(int3dvsen,0)) $para1Dname
+//		wave para1d = $para1Dname
+//		para1d = para3DvsEn[p][binarysearchinterp(enwave,en)]
+//		setscale /p x,dimoffset(para3DvsEn,0),dimdelta(para3DvsEn,0), para1d 
+//	endif
+//	if(!waveexists(perp1d) && waveexists(perp3DvsEn))
+//		make /n=(dimsize(perp3DvsEn,0)) $perp1Dname
+//		wave perp1d = $perp1Dname
+//		perp1d = perp3DvsEn[p][binarysearchinterp(enwave,en)]
+//		setscale /p x,dimoffset(perp3DvsEn,0),dimdelta(perp3DvsEn,0), perp1d 
+//	endif
 	
 	
 	
@@ -5746,7 +5746,9 @@ Function savehdfdef_but(ba) : ButtonControl
 				break
 			endif
 			string  simname = getdatafolder(0)
-			setdatafolder ::			
+			setdatafolder root:
+			newdatafolder /o/s Packages
+			newdatafolder /o/s HDFdata		
 			string/g listofendef = listofen
 			string/g colortabdef = colortab
 			variable /g offsetstepdef = offsetstep
@@ -5852,7 +5854,9 @@ function applydefhdf(dfref folder)
 	string /g colortab, listofen
 	variable/g offsetstep
 	string  simname = getdatafolder(0)
-	setdatafolder ::
+	setdatafolder root:
+	newdatafolder /o/s Packages
+	newdatafolder /o/s HDFdata
 	svar /z listofendef
 	if(svar_Exists(listofendef))
 		listofen = listofendef
@@ -5921,3 +5925,93 @@ function applydefhdf(dfref folder)
 	updateenplot(folder)
 	setdatafolder foldersave
 end
+
+
+
+Function CalcMorphology(ba) : ButtonControl
+	STRUCT WMButtonAction &ba
+
+	switch( ba.eventCode )
+		case 2: // mouse up
+			// SimulateSystem
+			string foldersave = getdatafolder(1)
+			setdatafolder root:Packages:ScatterSim3D
+			svar controllist
+			wave /t listofmaterials
+			string paramstring = generateParamstring(controllist)
+			string materialstring = generatematerialstring(listofmaterials)
+			nvar usealignment = root:Packages:ScatterSim3D:useprecalcalignment
+			string alignmentstring 
+			if(usealignment)
+				alignmentstring="None"
+			else
+				alignmentstring = generatealignmentstring(listofmaterials)
+			endif
+			svar SimName
+			svar morphology
+//			nvar alignment
+			nvar sizescale
+			nvar resolution
+			nvar numensteps
+			nvar movie
+			nvar startxrayenergy
+			nvar endxrayenergy
+			nvar savescattering2D
+			nvar voxelsize
+			nvar thickness
+			nvar rotatesys
+//			nvar useprecalcalignment
+			svar efield
+			nvar skipsim
+			nvar outputcy
+			string ycomp, zcomp
+			splitstring /e="^[( ]*([1234567890.]*)[^,]{0,5},[^,0.1]{0,5}([1234567890.]*)[) ]*" efield, ycomp, zcomp
+			newdatafolder /o/s $cleanupname(simname,0)
+			model3D(morphology,voxelsize,sizescale,resolution,thickness,paramstring,materialstring,alignmentstring,ycomp+","+zcomp,startxrayenergy,endxrayenergy,numensteps,movie = movie, save3d = savescattering2D, rotatesys = Rotatesys,outputcy=outputcy,skipsim=1)
+			setdatafolder foldersave
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
+
+Function Analyze_HDF_but(ba) : ButtonControl
+	STRUCT WMButtonAction &ba
+
+	switch( ba.eventCode )
+		case 2: // mouse up
+			// click code here
+			Analyze_HDF5_dir()
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
+
+Function Analyze_sim_but(ba) : ButtonControl
+	STRUCT WMButtonAction &ba
+
+	switch( ba.eventCode )
+		case 2: // mouse up
+			dfref foldersave = getdatafolderdfr()
+			setdatafolder root:Packages:ScatterSim3D
+			svar SimName
+			if(!datafolderExists(cleanupname(simname,0)))
+				print "no simulation called " + cleanupname(simname,0) + " found\rPlease choose a valid simulation name to analyze"
+			endif 
+			setdatafolder $cleanupname(simname,0)
+			dfref folder = getdatafolderdfr()
+			Analyze_dir(folder)
+			setdatafolder foldersave
+			// click code here
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
