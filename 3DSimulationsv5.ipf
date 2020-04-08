@@ -1904,7 +1904,7 @@ function Model3DPanel()
 	SetVariable AlignmentStrength,pos={21,149},size={173,16},disable=1,title="Strength of Alignment [0-1]"
 	SetVariable AlignmentStrength,limits={0,1,0.01},value= root:Packages:ScatterSim3D:AlignmentStrength
 	Button SimulateSystem,pos={253,455},size={210,47},proc=SimulateSystem,title="\\Z20Simulate System!"
-	SetVariable NameOfSim,pos={8,472},size={240,16},title="Name for Simulation :"
+	SetVariable NameOfSim,pos={8,458},size={240,16},title="Name for Simulation :"
 	SetVariable NameOfSim,value= root:Packages:ScatterSim3D:SimName
 	SetVariable setefield,pos={28.00,391.00},size={300,19},disable=1,proc=SetEField,title="E Field ( y component, z component )"
 	SetVariable setefield,value= root:Packages:ScatterSim3D:efield
@@ -1916,6 +1916,8 @@ function Model3DPanel()
 	CheckBox outputCYRSOXSchk,variable=outputcy,disable=1
 	CheckBox NoSimchk,pos={118.00,173.00},size={246.00,16.00},title="Skip the simulation.  Just create morphology"
 	CheckBox NoSimchk,variable=skipsim,disable=1
+	Button Analyze_Sim,pos={149,481},size={96,22},proc=SimulateSystem,title="\\Z20Analyze"
+	Button Analyze_HDF,pos={9,481},size={132,22},proc=SimulateSystem,title="\\Z20Analyze HDFs"
 	setdatafolder foldersave
 End
 function /s time2str2(secs)
@@ -5071,7 +5073,7 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	doimage = paramisdefault(doimage) ? 1 : doimage
 	
 	string foldersave = getdatafolder(1)
-	wave scatter3dsave = scatteringdata
+	wave scatter3dsave = scatter3DSave
 	string folder = getdatafolder(0)
 	wave enwave = envalues
 	if(!waveexists(scatter3dsave))
@@ -5100,9 +5102,36 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	scatterdisp = sqrt(x^2 +y^2) < .005 ? 0 : scatter3dsave(x)(y)[enstep]
 	matrixfilter /n=7 gauss scatterdisp
 	
+	
+	
 	wave/z scat1D = $scat1dname
 	wave/z para1D = $para1Dname
 	wave/z perp1d = $perp1Dname
+	
+	
+	wave/z int3DvsEn
+	wave/z perp3Dvsen
+	wave/z para3Dvsen
+	
+	if(!waveExists(scat1D) && waveexists(int3DvsEn))
+		make /n=(dimsize(int3dvsen,0)) $scat1dname
+		wave scat1D = $scat1dname
+		scat1D = int3dvsen[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(int3dvsen,0),dimdelta(int3dvsen,0), scat1d 
+	endif
+	if(!waveexists(para1d) && waveexists(para3DvsEn))
+		make /n=(dimsize(int3dvsen,0)) $para1Dname
+		wave para1d = $para1Dname
+		para1d = para3DvsEn[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(para3DvsEn,0),dimdelta(para3DvsEn,0), para1d 
+	endif
+	if(!waveexists(perp1d) && waveexists(perp3DvsEn))
+		make /n=(dimsize(perp3DvsEn,0)) $perp1Dname
+		wave perp1d = $perp1Dname
+		perp1d = perp3DvsEn[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(perp3DvsEn,0),dimdelta(perp3DvsEn,0), perp1d 
+	endif
+	
 	
 	
 	if(!waveExists(scat1D))
@@ -5402,7 +5431,7 @@ End
 //*******************************************************************************************************
 
 
-function /wave load_CV_HDF5_into_wave([pathbase])
+function /wave Analyze_HDF5_dir([pathbase])
 	string pathbase
 	if(paramisdefault(pathbase))
 		newpath /M="Path for simulation results"/O/Q/Z simulationpath
@@ -5441,10 +5470,10 @@ function /wave load_CV_HDF5_into_wave([pathbase])
 	svar /z listofendef, colortabdef
 	nvar /z offsetstepdef
 	newdatafolder /o/s $simname
-	make /o/n=(qnum, qnum, numfiles) /s scatteringdata
+	make /o/n=(qnum, qnum, numfiles) /s scatter3DSave
 	make /o/n=(numfiles) Envalues
-	setscale /i x,-pi/physsize,pi/physsize, scatteringdata
-	setscale /i y,-pi/physsize,pi/physsize, scatteringdata
+	setscale /i x,-pi/physsize,pi/physsize, scatter3DSave
+	setscale /i y,-pi/physsize,pi/physsize, scatter3DSave
 	variable j, hdfref
 	string filename,enstr
 	if(svar_Exists(listofendef))
@@ -5480,7 +5509,7 @@ function /wave load_CV_HDF5_into_wave([pathbase])
 		HDF5Loaddata/o/q/n=loadeddata hdfref, "/projection"
 		HDF5CloseFile hdfref
 		wave loadeddata
-		scatteringdata[][][j] = loadeddata[p][q]
+		scatter3DSave[][][j] = loadeddata[p][q]
 		setscale /i y,-pi/physsize,pi/physsize, loadeddata
 		setscale /i x,-pi/physsize,pi/physsize, loadeddata
 		splitstring /e="^Energy_(.*).h5$" filename, enstr
@@ -5489,13 +5518,13 @@ function /wave load_CV_HDF5_into_wave([pathbase])
 		wave int3dp0 = radialintegratehdf(loadeddata,0,90,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0")
 		wave int3dp0para = radialintegratehdf(loadeddata,pa-20,pa+20,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0para")
 		wave int3dp0perp = radialintegratehdf(loadeddata,pe-20,pe+20,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0perp")
-		int3DvsEn[][j] =  int3dp0[p] * x^2
-		ratio3DvsEn[][j] = (int3dp0para[p] - int3dp0perp[p]) / (int3dp0para[p] + int3dp0perp[p])
-		perp3Dvsen[][j] =  int3dp0perp[p]
-		para3Dvsen[][j] = int3dp0para[p]
+		multithread int3DvsEn[][j] =  int3dp0[p] * x^2
+		multithread ratio3DvsEn[][j] = (int3dp0para[p] - int3dp0perp[p]) / (int3dp0para[p] + int3dp0perp[p])
+		multithread perp3Dvsen[][j] =  int3dp0perp[p]
+		multithread para3Dvsen[][j] = int3dp0para[p]
 	endfor
 	doratiographhdf()
-	newimage /k=1 /n=$cleanupname(simname,0) scatteringdata
+	newimage /k=1 /n=$cleanupname(simname,0) scatter3DSave
 	doupdate
 	controlbar 46
 	Button addenergy,pos={150,3},size={120,20},disable=0,proc=addenergy_but,title="Add to 1D Plot"
@@ -5504,7 +5533,30 @@ function /wave load_CV_HDF5_into_wave([pathbase])
 	Button Applydef,pos={3,23},size={120,20},disable=0,proc=Applyhdfdef_but,title="Apply Default"
 	scatter3DAppend3DImageSlider(envalues)
 	
-	modifyimage scatteringdata ctab={0.1,1000,Terrain,0},log=1
+	modifyimage scatter3DSave ctab={0.1,1000,Terrain,0},log=1
+	modifygraph height={Plan,1,left,top}
+	updateenplot(getdatafolderDFR())
+	applydefhdf(getdatafolderDFR())
+	updateenplot(getdatafolderDFR())
+	setdatafolder foldersave
+end
+
+
+function /wave Analyze_dir(dfref folder)
+	dfref foldersave = getdatafolderdfr()
+	setdatafolder folder
+	duplicate /o enwave, envalues
+	doratiographhdf()
+	newimage /k=1 /n=$cleanupname(getdatafolder(0),0) scatter3DSave
+	doupdate
+	controlbar 46
+	Button addenergy,pos={150,3},size={120,20},disable=0,proc=addenergy_but,title="Add to 1D Plot"
+	Button Removeenergy,pos={150,23},size={120,20},disable=0,proc=removeenergy_but,title="Remove from Plot"
+	Button savedef,pos={3,3},size={120,20},disable=0,proc=savehdfdef_but,title="Save as Default"
+	Button Applydef,pos={3,23},size={120,20},disable=0,proc=Applyhdfdef_but,title="Apply Default"
+	scatter3DAppend3DImageSlider(envalues)
+	
+	modifyimage scatter3DSave ctab={0.1,1000,Terrain,0},log=1
 	modifygraph height={Plan,1,left,top}
 	updateenplot(getdatafolderDFR())
 	applydefhdf(getdatafolderDFR())
@@ -5595,7 +5647,6 @@ function updateenplot(dfrEF folder)
 		pename = stringfromlist(0,stringfromlist(i,listoftraces),",")
 		paname = stringfromlist(1,stringfromlist(i,listoftraces),",")
 		rname = stringfromlist(2,stringfromlist(i,listoftraces),",")
-				
 		ModifyGraph /w=$graphname log=1
 		ModifyGraph /w=$graphname mode($pename)=7,hbFill($pename)=5,useNegPat($pename)=1,hBarNegFill($pename)=3,toMode($pename)=1
 		modifygraph /w=$graphname rgb($paname) = (red,green,blue)
