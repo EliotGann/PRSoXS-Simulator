@@ -1056,7 +1056,14 @@ function sum3dsystem(s3d) // this sums all of the relative densities of all the 
 end
 
 function /s variables_spheres2()
-	return "Interpenetration [pixels],SetVariable,2;Minimum Seperation,SetVariable,.1;Number of Particles (Max),SetVariable,500;PolyDispursity (sigma r),setvariable,5;Noise,SetVariable,0;"
+	string variables =  "Interpenetration [pixels],SetVariable,0;"
+	variables += "Minimum Seperation,SetVariable,1;"
+	variables += "Number of Particles (Max),SetVariable,5000;"
+	variables += "PolyDispursity (sigma r),setvariable,.2;"
+	variables += "Noise,SetVariable,0;"
+	variables += "Minradius,SetVariable,4;"
+	variables += "Maxradius,SetVariable,6;"
+	return variables
 end
 function model3D_Spheres2(s3d)
 	//Creates a spherical system, with two components, aligned 
@@ -1086,12 +1093,14 @@ function model3D_Spheres2(s3d)
 	variable pd = 				str2num(stringfromlist( 3 ,s3d.paramstring,","))
 	variable thickness = 		s3d.thickness
 	variable noise = 			str2num(stringfromlist( 4 ,s3d.paramstring,","))
+	variable minrad = 			ceil(str2num(stringfromlist( 4 ,s3d.paramstring,",")))
+	variable maxrad = 			floor(str2num(stringfromlist( 4 ,s3d.paramstring,",")))
 	
 
 	
 	make /o /n=(thickness,s3d.num,s3d.num) mat=1,xwave, ywave, zwave
 	
-	make/B/U /o /n=(thickness,s3d.num,s3d.num,30) exmat= (p <= t) || (q <= t) || (r <= t) || (p >= thickness-t) || (q >= s3d.num-t) || (r >= s3d.num-t) ? 0 : 1
+	make/B/U /o /n=(thickness,s3d.num,s3d.num,maxrad-minrad) exmat= (p <= (t+minrad)) || (q <= (t+minrad)) || (r <= (t+minrad)) || (p >= thickness-(t+minrad)) || (q >= s3d.num-(t+minrad)) || (r >= s3d.num-(t+minrad)) ? 0 : 1
 	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave
 	if(s3d.movie)
 		Execute("Spheres3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
@@ -1119,7 +1128,7 @@ function model3D_Spheres2(s3d)
 			endif
 			//duplicate/o /r=()()()(ceil(2*orad)) exmat,tempwave
 			redimension /n=(thickness,s3d.num,s3d.num) tempwave
-			multithread tempwave[][][] = exmat[p][q][r][ceil(orad)]
+			multithread tempwave[][][] = exmat[p][q][r][ceil(orad-minrad)]
 //			imagefilter /n=(ceil(2*orad)) /o min3d tempwave
 //			multithread tempwave = tempwave<1? 0 : 1 
 //			multithread tempwave = (p <= orad) || (q <= orad) || (r <= orad) || (p >= thickness-orad) || (q >= s3d.num-orad) || (r >= s3d.num-orad) ? 0 : tempwave[p][q][r]
@@ -1149,7 +1158,7 @@ function model3D_Spheres2(s3d)
 		endif
 		// subtract out this sphere from the matrix  // matrix starts at 1s, within this sphere, multiply this by 0, outside multiply by 1
 		multithread mat[min(0,cx-radius),max(thickness-1,cx+radius)][min(cy-radius,0),max(s3d.num-1,cy+radius)][min(cz-radius,0),max(s3d.num-1,cz+radius)]*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 < radius^2 ? 0 : 1 
-		multithread exmat[min(0,cx-orad-30),max(thickness-1,cx+orad+30)][min(cy-orad-30,0),max(s3d.num-1,cy+orad+30)][min(cz-orad-30,0),max(s3d.num-1,cz+orad+30)][]*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (orad+t)^2 ? 0 : 1 
+		multithread exmat[min(0,cx-orad-maxrad+minrad),max(thickness-1,cx+orad+maxrad-minrad)][min(cy-orad-maxrad+minrad,0),max(s3d.num-1,cy+orad+maxrad-minrad)][min(cz-orad-maxrad+minrad,0),max(s3d.num-1,cz+orad+maxrad-minrad)][]*= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (orad+t+minrad)^2 ? 0 : 1 
 		if(s3d.movie)
 			execute("ModifyGizmo /n=Spheres3D update=2")
 			doupdate
