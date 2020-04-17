@@ -5103,7 +5103,7 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	string Para1Dname = cleanupname("Para1D"+num2str(en),0)
 	string Perp1Dname = cleanupname("Perp1D"+num2str(en),0)
 	
-	make /n=(1000,1000) /o $scatname
+	make /n=(dimsize(scatter3dsave,1),dimsize(scatter3dsave,1)) /o $scatname
 	wave scatterdisp = $scatname
 	setscale /p x,dimoffset(scatter3dsave,0),dimdelta(scatter3dsave,0), scatterdisp
 	setscale /p y,dimoffset(scatter3dsave,0),dimdelta(scatter3dsave,0), scatterdisp
@@ -5118,28 +5118,28 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	wave/z perp1d = $perp1Dname
 	
 	
-//	wave/z int3DvsEn
-//	wave/z perp3Dvsen
-//	wave/z para3Dvsen
-//	
-//	if(!waveExists(scat1D) && waveexists(int3DvsEn))
-//		make /n=(dimsize(int3dvsen,0)) $scat1dname
-//		wave scat1D = $scat1dname
-//		scat1D = int3dvsen[p][binarysearchinterp(enwave,en)]
-//		setscale /p x,dimoffset(int3dvsen,0),dimdelta(int3dvsen,0), scat1d 
-//	endif
-//	if(!waveexists(para1d) && waveexists(para3DvsEn))
-//		make /n=(dimsize(int3dvsen,0)) $para1Dname
-//		wave para1d = $para1Dname
-//		para1d = para3DvsEn[p][binarysearchinterp(enwave,en)]
-//		setscale /p x,dimoffset(para3DvsEn,0),dimdelta(para3DvsEn,0), para1d 
-//	endif
-//	if(!waveexists(perp1d) && waveexists(perp3DvsEn))
-//		make /n=(dimsize(perp3DvsEn,0)) $perp1Dname
-//		wave perp1d = $perp1Dname
-//		perp1d = perp3DvsEn[p][binarysearchinterp(enwave,en)]
-//		setscale /p x,dimoffset(perp3DvsEn,0),dimdelta(perp3DvsEn,0), perp1d 
-//	endif
+	wave/z int3DvsEn
+	wave/z perp3Dvsen
+	wave/z para3Dvsen
+	
+	if(!waveExists(scat1D) && waveexists(int3DvsEn))
+		make /n=(dimsize(int3dvsen,0)) $scat1dname
+		wave scat1D = $scat1dname
+		scat1D = int3dvsen[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(int3dvsen,0),dimdelta(int3dvsen,0), scat1d 
+	endif
+	if(!waveexists(para1d) && waveexists(para3DvsEn))
+		make /n=(dimsize(int3dvsen,0)) $para1Dname
+		wave para1d = $para1Dname
+		para1d = para3DvsEn[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(para3DvsEn,0),dimdelta(para3DvsEn,0), para1d 
+	endif
+	if(!waveexists(perp1d) && waveexists(perp3DvsEn))
+		make /n=(dimsize(perp3DvsEn,0)) $perp1Dname
+		wave perp1d = $perp1Dname
+		perp1d = perp3DvsEn[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(perp3DvsEn,0),dimdelta(perp3DvsEn,0), perp1d 
+	endif
 	
 	
 	
@@ -5499,8 +5499,8 @@ function /wave Analyze_HDF5_dir([pathbase])
 	newdatafolder /o/s $simname
 	make /o/n=(qnum, qnum, numfiles) /s scatter3DSave
 	make /o/n=(numfiles) Envalues
-	setscale /i x,-pi/physsize,pi/physsize, scatter3DSave
-	setscale /i y,-pi/physsize,pi/physsize, scatter3DSave
+	setscale /p x,-pi/physsize ,2*pi/(physsize*qnum), scatter3DSave
+	setscale /p y,-pi/physsize ,2*pi/(physsize*qnum), scatter3DSave
 	variable j, hdfref
 	string filename,enstr
 	if(svar_Exists(listofendef))
@@ -5537,14 +5537,14 @@ function /wave Analyze_HDF5_dir([pathbase])
 		HDF5CloseFile hdfref
 		wave loadeddata
 		scatter3DSave[][][j] = loadeddata[p][q]
-		setscale /p y,-pi/physsize,2*pi/(physsize*dimsize(loadeddata,0)), loadeddata
-		setscale /p x,-pi/physsize,2*pi/(physsize*dimsize(loadeddata,1)), loadeddata
+		setscale /p y,-pi/physsize ,2*pi/(physsize*dimsize(loadeddata,0)), loadeddata
+		setscale /p x,-pi/physsize ,2*pi/(physsize*dimsize(loadeddata,1)), loadeddata
 		splitstring /e="^Energy_(.*).h5$" filename, enstr
 		Envalues[j] = str2num(enstr)
 		
-		wave int3dp0 = radialintegratehdf(loadeddata,0,90,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0")
-		wave int3dp0para = radialintegratehdf(loadeddata,pa-20,pa+20,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0para")
-		wave int3dp0perp = radialintegratehdf(loadeddata,pe-20,pe+20,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0perp")
+		wave int3dp0 = radialintegratehdf(loadeddata,0,90,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0")
+		wave int3dp0para = radialintegratehdf(loadeddata,pa-20,pa+20,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0para")
+		wave int3dp0perp = radialintegratehdf(loadeddata,pe-20,pe+20,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0perp")
 		multithread int3DvsEn[][j] =  int3dp0[p] //* x^2
 		multithread ratio3DvsEn[][j] = (int3dp0para[p] - int3dp0perp[p]) / (int3dp0para[p] + int3dp0perp[p])
 		multithread perp3Dvsen[][j] =  int3dp0perp[p]
