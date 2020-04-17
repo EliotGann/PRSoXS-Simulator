@@ -5516,6 +5516,7 @@ function /wave Analyze_HDF5_dir([pathbase])
 		offsetstep = offsetstepdef
 	endif
 		
+	make/d/o/n=(floor(qnum/(sqrt(2))),numfiles) int3DvsEn=0,ratio3DvsEn=0, para3dvsen, perp3dvsen
 
 
 	setscale /i x, 0,pi/physsize, int3DvsEn,ratio3DvsEn, para3dvsen, perp3dvsen
