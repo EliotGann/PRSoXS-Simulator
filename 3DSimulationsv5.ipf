@@ -873,9 +873,9 @@ function radialintegratesystem(s3d)
 	variable ez =1// str2num(stringfromlist(1,s3d.efield,","))
 	variable pe = atan(ey/ez)*180/pi
 	variable pa = atan(-ez/ey)*180/pi
-	wave s3d.int3dp0 = radialintegratew(s3d.scatter3d,0,90,"int3dp0")
-	wave s3d.int3dp0para = radialintegratew(s3d.scatter3d,pa-20,pa+20,"int3dp0para")
-	wave s3d.int3dp0perp = radialintegratew(s3d.scatter3d,pe-20,pe+20,"int3dp0perp")
+	wave s3d.int3dp0 = radialintegratehdf(s3d.scatter3d,0,90,0,pi/s3d.size,floor(s3d.num/sqrt(2)),"int3dp0")
+	wave s3d.int3dp0para = radialintegratehdf(s3d.scatter3d,pa-20,pa+20,0,pi/s3d.size,floor(s3d.num/sqrt(2)),"int3dp0para")
+	wave s3d.int3dp0perp = radialintegratehdf(s3d.scatter3d,pe-20,pe+20,0,pi/s3d.size,floor(s3d.num/sqrt(2)),"int3dp0perp")
 	duplicate/o s3d.int3dp0, s3d.int3d
 	duplicate/o s3d.int3dp0para, s3d.int3dpara
 	duplicate/o s3d.int3dp0perp, s3d.int3dperp
@@ -5103,14 +5103,14 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	string Para1Dname = cleanupname("Para1D"+num2str(en),0)
 	string Perp1Dname = cleanupname("Perp1D"+num2str(en),0)
 	
-	make /n=(dimsize(scatter3dsave,1),dimsize(scatter3dsave,1)) /o $scatname
+	make /n=(dimsize(scatter3dsave,0),dimsize(scatter3dsave,1)) /o $scatname
 	wave scatterdisp = $scatname
 	setscale /p x,dimoffset(scatter3dsave,0),dimdelta(scatter3dsave,0), scatterdisp
-	setscale /p y,dimoffset(scatter3dsave,0),dimdelta(scatter3dsave,0), scatterdisp
+	setscale /p y,dimoffset(scatter3dsave,1),dimdelta(scatter3dsave,1), scatterdisp
 	variable enstep = binarysearch(enwave,en)
-	scatterdisp = sqrt(x^2 +y^2) < .005 ? 0 : scatter3dsave(x)(y)[enstep]
-	matrixfilter /n=7 gauss scatterdisp
-	
+	//scatterdisp = sqrt(x^2 +y^2) < .005 ? 0 : scatter3dsave(x)(y)[enstep]
+	//matrixfilter /n=7 gauss scatterdisp
+	scatterdisp = scatter3dsave(x)(y)[enstep]
 	
 	
 	wave/z scat1D = $scat1dname
@@ -5118,43 +5118,46 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	wave/z perp1d = $perp1Dname
 	
 	
-	wave/z int3DvsEn
-	wave/z perp3Dvsen
-	wave/z para3Dvsen
+	wave/z int3DvsEnhdf
+	wave/z perp3Dvsenhdf
+	wave/z para3Dvsenhdf
 	
-	if(!waveExists(scat1D) && waveexists(int3DvsEn))
-		make /n=(dimsize(int3dvsen,0)) $scat1dname
+	if(!waveExists(scat1D) && waveexists(int3DvsEnhdf))
+		make /n=(dimsize(int3dvsenhdf,0)) $scat1dname
 		wave scat1D = $scat1dname
-		scat1D = int3dvsen[p][binarysearchinterp(enwave,en)]
-		setscale /p x,dimoffset(int3dvsen,0),dimdelta(int3dvsen,0), scat1d 
+		scat1D = int3dvsenhdf[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(int3dvsenhdf,0),dimdelta(int3dvsenhdf,0), scat1d 
 	endif
-	if(!waveexists(para1d) && waveexists(para3DvsEn))
-		make /n=(dimsize(int3dvsen,0)) $para1Dname
+	if(!waveexists(para1d) && waveexists(para3DvsEnhdf))
+		make /n=(dimsize(int3dvsenhdf,0)) $para1Dname
 		wave para1d = $para1Dname
-		para1d = para3DvsEn[p][binarysearchinterp(enwave,en)]
-		setscale /p x,dimoffset(para3DvsEn,0),dimdelta(para3DvsEn,0), para1d 
+		para1d = para3DvsEnhdf[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(para3DvsEnhdf,0),dimdelta(para3DvsEnhdf,0), para1d 
 	endif
-	if(!waveexists(perp1d) && waveexists(perp3DvsEn))
-		make /n=(dimsize(perp3DvsEn,0)) $perp1Dname
+	if(!waveexists(perp1d) && waveexists(perp3DvsEnhdf))
+		make /n=(dimsize(perp3DvsEnhdf,0)) $perp1Dname
 		wave perp1d = $perp1Dname
-		perp1d = perp3DvsEn[p][binarysearchinterp(enwave,en)]
-		setscale /p x,dimoffset(perp3DvsEn,0),dimdelta(perp3DvsEn,0), perp1d 
+		perp1d = perp3DvsEnhdf[p][binarysearchinterp(enwave,en)]
+		setscale /p x,dimoffset(perp3DvsEnhdf,0),dimdelta(perp3DvsEnhdf,0), perp1d 
 	endif
 	
-	
+	variable ey =0
+	variable ez =1
+	variable pe = atan(ey/ez)*180/pi
+	variable pa = atan(-ez/ey)*180/pi
 	
 	if(!waveExists(scat1D))
-		radialintegratew(scatterdisp,0,90,scat1dname)
+		radialintegratehdf(scatterdisp,0,90,0,-dimoffset(scatter3dsave,0),floor(dimsize(scatter3dsave,0)/(sqrt(2))),scat1dname)
 		wave scat1D = $scat1dname
 		scat1D *=x^qpwr
 	endif
 	if(!waveexists(para1d))
-		radialintegratew(scatterdisp,0,20,para1Dname)
+		radialintegratehdf(scatterdisp,pa-20,pa+20,0,-dimoffset(scatter3dsave,0),floor(dimsize(scatter3dsave,0)/(sqrt(2))),para1Dname)
 		wave para1D = $para1Dname
 		para1D *=x^qpwr
 	endif
 	if(!waveexists(perp1d))
-		radialintegratew(scatterdisp,70,90,perp1Dname)
+		radialintegratehdf(scatterdisp,pe-20,pe+20,0,-dimoffset(scatter3dsave,0),floor(dimsize(scatter3dsave,0)/(sqrt(2))),perp1Dname)
 		wave perp1d = $perp1Dname
 		perp1D *=x^qpwr
 	endif
@@ -5233,13 +5236,13 @@ End
 function doratiographhdf([addtolayout])
 	variable addtolayout
 	addtolayout = paramisdefault(addtolayout) ? 0 : addtolayout
-	wave ratio3dvsen, int3dvsen
+	wave ratio3dvsenhdf, int3dvsenhdf
 	wave envalues
 	duplicate /o envalues, enwavedisp
 	MakeEdgesWave(envalues, enwavedisp)
 	
 	string folder = getdatafolder(0)
-	duplicate/o ratio3dvsen, ratio3dtemp
+	duplicate/o ratio3dvsenhdf, ratio3dtemp
 	dowindow /k $("ratiograph_"+folder)
 	Display /W=(103,49,476,547)/k=1 /n=$("ratiograph_"+folder)
 	AppendImage/T ratio3dtemp vs {*,enwavedisp}
@@ -5269,8 +5272,8 @@ function doratiographhdf([addtolayout])
 	ModifyGraph sep(left)=2
 	dowindow /k $("Ingraph_"+folder)
 	Display /W=(103,49,476,547)/k=1 /n=$("Ingraph_"+folder)
-	appendimage/T int3DvsEn vs {*,enwavedisp}
-	ModifyImage int3DvsEn ctab= {.001,*,YellowHot,0},log=1
+	appendimage/T int3DvsEnhdf vs {*,enwavedisp}
+	ModifyImage int3DvsEnhdf ctab= {.001,*,YellowHot,0},log=1
 	ModifyGraph margin(left)=43,margin(bottom)=9,margin(top)=28,margin(right)=9,gfSize=14
 	ModifyGraph nticks(top)=8
 	ModifyGraph standoff=0
@@ -5516,11 +5519,11 @@ function /wave Analyze_HDF5_dir([pathbase])
 		offsetstep = offsetstepdef
 	endif
 		
-	make/d/o/n=(floor(qnum/(sqrt(2))),numfiles) int3DvsEn=0,ratio3DvsEn=0, para3dvsen, perp3dvsen
+	make/d/o/n=(floor(qnum/(sqrt(2))),numfiles) int3DvsEnhdf=0,ratio3DvsEnhdf=0, para3dvsenhdf, perp3dvsenhdf
 
 
-	setscale /i x, 0,pi/physsize, int3DvsEn,ratio3DvsEn, para3dvsen, perp3dvsen
-	setscale /i y, wavemin(envalues), wavemax(envalues), int3DvsEn,ratio3DvsEn, para3dvsen, perp3dvsen
+	setscale /i x, 0,pi/physsize, int3DvsEnhdf,ratio3DvsEnhdf, para3dvsenhdf, perp3dvsenhdf
+	setscale /i y, wavemin(envalues), wavemax(envalues), int3DvsEnhdf,ratio3DvsEnhdf, para3dvsenhdf, perp3dvsenhdf
 	
 	
 	variable ey =0
@@ -5545,10 +5548,10 @@ function /wave Analyze_HDF5_dir([pathbase])
 		wave int3dp0 = radialintegratehdf(loadeddata,0,90,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0")
 		wave int3dp0para = radialintegratehdf(loadeddata,pa-20,pa+20,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0para")
 		wave int3dp0perp = radialintegratehdf(loadeddata,pe-20,pe+20,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0perp")
-		multithread int3DvsEn[][j] =  int3dp0[p] //* x^2
-		multithread ratio3DvsEn[][j] = (int3dp0para[p] - int3dp0perp[p]) / (int3dp0para[p] + int3dp0perp[p])
-		multithread perp3Dvsen[][j] =  int3dp0perp[p]
-		multithread para3Dvsen[][j] = int3dp0para[p]
+		multithread int3DvsEnhdf[][j] =  int3dp0[p] //* x^2
+		multithread ratio3DvsEnhdf[][j] = (int3dp0para[p] - int3dp0perp[p]) / (int3dp0para[p] + int3dp0perp[p])
+		multithread perp3Dvsenhdf[][j] =  int3dp0perp[p]
+		multithread para3Dvsenhdf[][j] = int3dp0para[p]
 	endfor
 	doratiographhdf()
 	newimage /k=1 /n=$cleanupname(simname,0) scatter3DSave
