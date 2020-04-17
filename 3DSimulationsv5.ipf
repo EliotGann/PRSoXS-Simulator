@@ -5077,7 +5077,7 @@ function /s scatterimagehdf(en,[addtolayout,qpwr,graphname, doimage,removeen])
 	string graphname
 	removeen  = paramIsDefault(removeen)? 0 : removeen
 	variable append2graph = !paramisdefault(graphname) // if supplied with graphname, appendtograph
-	qpwr = paramisdefault(qpwr)? 2:qpwr
+	qpwr = paramisdefault(qpwr)? 0:qpwr
 	addtolayout = paramisdefault(addtolayout) ? 0 : addtolayout
 	doimage = paramisdefault(doimage) ? 1 : doimage
 	
@@ -5271,9 +5271,27 @@ function doratiographhdf([addtolayout])
 	Display /W=(103,49,476,547)/k=1 /n=$("Ingraph_"+folder)
 	appendimage/T int3DvsEn vs {*,enwavedisp}
 	ModifyImage int3DvsEn ctab= {.001,*,YellowHot,0},log=1
-	ModifyGraph log(top)=1
+	ModifyGraph margin(left)=43,margin(bottom)=9,margin(top)=28,margin(right)=9,gfSize=14
+	ModifyGraph nticks(top)=8
+	ModifyGraph standoff=0
+	ModifyGraph tlOffset=-2
+	Label left "X-ray Energy [eV]"
 	SetAxis top 0.015,1
 	SetAxis/R left 275,295
+	ModifyGraph log(top)=1
+	ModifyGraph mirror=2
+	ModifyGraph minor=1
+	ModifyGraph fSize=8
+	ModifyGraph standoff=0
+	ModifyGraph btLen=3
+	ModifyGraph tlOffset=-2
+	ModifyGraph fSize=0
+	ModifyGraph gfSize=14
+	ModifyGraph tkLblRot=0
+	ModifyGraph nticks(left)=6
+	ModifyGraph tick=2,btLen=5
+	ModifyGraph ftLen(left)=5
+	ModifyGraph sep(left)=2
 	if(addtolayout)
 		appendlayoutobject /F=0 graph $("ratiograph_"+folder)
 		appendlayoutobject /F=0 graph $("Ingraph_"+folder)
@@ -5519,15 +5537,15 @@ function /wave Analyze_HDF5_dir([pathbase])
 		HDF5CloseFile hdfref
 		wave loadeddata
 		scatter3DSave[][][j] = loadeddata[p][q]
-		setscale /i y,-pi/physsize,pi/physsize, loadeddata
-		setscale /i x,-pi/physsize,pi/physsize, loadeddata
+		setscale /p y,-pi/physsize,2*pi/(physsize*dimsize(loadeddata,0)), loadeddata
+		setscale /p x,-pi/physsize,2*pi/(physsize*dimsize(loadeddata,1)), loadeddata
 		splitstring /e="^Energy_(.*).h5$" filename, enstr
 		Envalues[j] = str2num(enstr)
 		
 		wave int3dp0 = radialintegratehdf(loadeddata,0,90,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0")
 		wave int3dp0para = radialintegratehdf(loadeddata,pa-20,pa+20,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0para")
 		wave int3dp0perp = radialintegratehdf(loadeddata,pe-20,pe+20,0,pi/physsize,floor(qnum/(2*sqrt(2))),"int3dp0perp")
-		multithread int3DvsEn[][j] =  int3dp0[p] * x^2
+		multithread int3DvsEn[][j] =  int3dp0[p] //* x^2
 		multithread ratio3DvsEn[][j] = (int3dp0para[p] - int3dp0perp[p]) / (int3dp0para[p] + int3dp0perp[p])
 		multithread perp3Dvsen[][j] =  int3dp0perp[p]
 		multithread para3Dvsen[][j] = int3dp0para[p]
@@ -5642,13 +5660,14 @@ function updateenplot(dfrEF folder)
 	endif
 	ColorTab2Wave $colortab
 	variable cmode = whichlistitem(colortab,ctablist())
-	PopupMenu colorscheme mode = cmode+1
+	PopupMenu colorscheme mode = cmode+1, win=$graphname
 	wave RGB = M_colors
 	Variable numRows= DimSize(rgb,0)
 	Variable red, green, blue
 	Variable index, i
 	string paname, pename, rname
-	for(i=0; i<numTraces; i+=1)
+	Legend/w=$graphname/C/N=text1/J "X-ray Energy";DelayUpdate
+	for(i=numTraces-1; i>=0; i-=1)
 		index = round(i/(numTracesden-1) * (numRows*2/3-1))	// spread entire color range over all traces.
 		red = rgb[index][0]
 		green = rgb[index][1]
@@ -5664,9 +5683,11 @@ function updateenplot(dfrEF folder)
 		modifygraph /w=$graphname muloffset($paname)={0,offset}
 		modifygraph /w=$graphname muloffset($pename)={0,offset}
 		modifygraph /w=$graphname muloffset($rname)={0,offset}
-		
-		offset *= offsetsteplog
+		AppendText/N=text1/w=$graphname "\n\\s("+rname+") "+stringfromlist(i,plottedens)+" eV"
+		offset /= offsetsteplog
 	endfor
+	Label /w=$graphname  left "Intensity";DelayUpdate
+	Label /w=$graphname  bottom "Momentum Transfer (q)"
 	
 	setdatafolder foldersave
 end
