@@ -6118,10 +6118,7 @@ function model3D_multishelllattice(s3d)
 	variable mr=floor(minradius)
 
 	
-	make /o /n=(thickness,s3d.num,s3d.num) mat=1, corew=0, inshell=0, xwave, ywave, zwave
-	
-	make/B/U /o /n=(thickness,s3d.num,s3d.num,ceil(maxradius)-floor(minradius)) exmat= (p <= t-mr) || (q <= t-mr) || (r <= t-mr) || (p >= thickness-t+mr) || (q >= s3d.num-t+mr) || (r >= s3d.num-t+mr) ? 0 : 1
-	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave
+	make /o /n=(thickness,s3d.num,s3d.num) mat=1, corew=0, inshell=0
 	if(s3d.movie)
 		Execute("Spheres3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
 		Execute("exportgizmo wave=\"testimage\"  ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
