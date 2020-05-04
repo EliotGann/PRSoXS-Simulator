@@ -1628,13 +1628,13 @@ end
 function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,s3d)
 
 	struct ThreeDSystem &s3d
-	wave sn, sb
+	wave sn, sb // alignment vector field (input and output) and forcing field
 	variable Ec // lower energy when aligned with nearest neighbors	- should be negative
 	variable Ea // cost of being different amplitudes of neighbors 	- should be positive
 	variable Eb // entropic cost of being non zero  	- should be positive
-	variable Es // alignment with barrier 			- should be negative
-	variable jump, temp
-	variable n
+	variable Es // alignment with barrier 			- should be negative (for face on alignment) or positive (for edge on alignment)
+	variable jump, temp // parameters for the jumping magnitude and temperature for the metropolis alg
+	variable n // number of itterations
 	variable movie = s3d.movie
 	variable numx=dimsize(sn,0), numy=dimsize(sn,1), numz=dimsize(sn,2)
 	make/o /n=(dimsize(sn,1)*dimsize(sn,2)) xloc = mod(p,dimsize(sn,1)),yloc = floor(p/dimsize(sn,1))
@@ -1645,30 +1645,32 @@ function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,s3d)
 	
 	make /o/n=(dimsize(sn,0),dimsize(sn,1),dimsize(sn,2))  En
 	newdatafolder /o/s alignment
-	make /o/n=(dimsize(sn,0),dimsize(sn,1),dimsize(sn,2))  Ensbmag, snmag,sbmag, stestmag, Etest, magsn, magstest, magsn1, magsn2, magsn3, magsn4, magsn5, magsn6,magsn7, magsn8, magsn9, magsn10, magsn11, magsn12,magsn13, magsn14, magsn15, magsn16,magsn17, magsn18, tempw
+	make /o/n=(dimsize(sn,0),dimsize(sn,1),dimsize(sn,2))  Ensbmag, snmag,sbmag, stestmag, Etest, magsn, magstest, magsn1, magsn2, magsn3, magsn4, magsn5, magsn6, magsn7, magsn8, magsn9, magsn10, magsn11, magsn12,magsn13, magsn14, magsn15, magsn16,magsn17, magsn18, tempw
 	duplicate/o sn,stest 
 	
 	sbmag = sqrt(sb[p][q][r][0]^2+sb[p][q][r][1]^2+sb[p][q][r][2]^2)
 	//sn = enoise(sqrt(3))
 	variable i
 	for(i=0;i<n;i+=1)
+	// sn is the s vector at each point
+	// snmag is it's magnitude (can be between 0 and 1)
 		multithread snmag = sqrt(sn[p][q][r][0]^2+sn[p][q][r][1]^2+sn[p][q][r][2]^2)
 		multithread sn /= snmag[p][q][r]>1 ? snmag[p][q][r] : 1 // make sure magnitute of n can't get bigger than 1
 		multithread snmag = sqrt(sn[p][q][r][0]^2+sn[p][q][r][1]^2+sn[p][q][r][2]^2)
-		
+	// random jump from this point = stest (we will see, point by point, if this random jump was lower or greater energy)
 		multithread stest = max(-1,min(1,sn+gnoise(jump)))
-		
+	// test magnitude - with with jump, themagniture very well might be above 1, so we need to normalize it back
 		multithread stestmag = sqrt(stest[p][q][r][0]^2+stest[p][q][r][1]^2+stest[p][q][r][2]^2)
 		multithread stest /= stestmag[p][q][r]>1 ? stestmag[p][q][r] : 1 // make sure magnitute of test can't get bigger than 1
 		multithread stestmag = sqrt(stest[p][q][r][0]^2+stest[p][q][r][1]^2+stest[p][q][r][2]^2)
-		
+	// get the nearest neighbors
 		multithread magsn1[][][] = snmag[mod(p-1+numx,numx)][q][r]
 		multithread magsn2[][][] = snmag[mod(p+1+numx,numx)][q][r]
 		multithread magsn3[][][] = snmag[p][mod(q-1+numy,numy)][r]
 		multithread magsn4[][][] = snmag[p][mod(q+1+numy,numy)][r]
 		multithread magsn5[][][] = snmag[p][q][mod(r-1+numz,numz)]
 		multithread magsn6[][][] = snmag[p][q][mod(r+1+numz,numz)]
-		
+	// get the next nearest neighbors
 		multithread magsn7[][][] = snmag[mod(p+1+numx,numx)][mod(q+1+numy,numy)][r]
 		multithread magsn8[][][] = snmag[mod(p+1+numx,numx)][mod(q-1+numy,numy)][r]
 		multithread magsn9[][][] = snmag[mod(p-1+numx,numx)][mod(q+1+numy,numy)][r]
@@ -1681,7 +1683,7 @@ function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,s3d)
 		multithread magsn16[][][] = snmag[p][mod(q+1+numy,numy)][mod(r-1+numz,numz)]
 		multithread magsn17[][][] = snmag[p][mod(q-1+numy,numy)][mod(r+1+numz,numz)]
 		multithread magsn18[][][] = snmag[p][mod(q-1+numy,numy)][mod(r-1+numz,numz)]
-
+	// the magnitude of all of these neighbors needs to be positive (negative breaks the calculation - this should be fixed)
 		// make sure the deominators aren't zero, just very small
 		multithread magsn = magsn<.001 ?.001 : magsn
 		multithread magsn1 = magsn1<.001 ?.001 : magsn1
@@ -1691,21 +1693,31 @@ function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,s3d)
 		multithread magsn5 = magsn5<.001 ?.001 : magsn5
 		multithread magsn6 = magsn6<.001 ?.001 : magsn6
 		multithread magstest = magstest<.001 ?.001 : magstest
-		
-		multithread Etest = ((stest[p][q][r][0] * sn[mod(p-1+numx,numx)][q][r][0]+stest[p][q][r][1] * sn[mod(p-1+numx,numx)][q][r][1]+stest[p][q][r][2] * sn[mod(p-1+numx,numx)][q][r][2])   )^2//  /(magsn2[p][q][r]*magstest[p][q][r]))^2
-		multithread Etest += ((stest[p][q][r][0] * sn[mod(p+1+numx,numx)][q][r][0]+stest[p][q][r][1] * sn[mod(p+1+numx,numx)][q][r][1]+stest[p][q][r][2] * sn[mod(p+1+numx,numx)][q][r][2])   )^2//  /(magsn2[p][q][r]*magstest[p][q][r]))^2
-		multithread Etest += ((stest[p][q][r][0] * sn[p][mod(q-1+numy,numy)][r][0]+stest[p][q][r][1] * sn[p][mod(q-1+numy,numy)][r][1]+stest[p][q][r][2] * sn[p][mod(q-1+numy,numy)][r][2])   )^2//  /(magsn3[p][q][r]*magstest[p][q][r]))^2
-		multithread Etest += ((stest[p][q][r][0] * sn[p][mod(q+1+numy,numy)][r][0]+stest[p][q][r][1] * sn[p][mod(q+1+numy,numy)][r][1]+stest[p][q][r][2] * sn[p][mod(q+1+numy,numy)][r][2])   )^2//  /(magsn4[p][q][r]*magstest[p][q][r]))^2
-		multithread Etest += ((stest[p][q][r][0] * sn[p][q][mod(r-1+numz,numz)][0]+stest[p][q][r][1] * sn[p][q][mod(r-1+numz,numz)][1]+stest[p][q][r][2] * sn[p][q][mod(r-1+numz,numz)][2])  )^2//  /(magsn5[p][q][r]*magstest[p][q][r]))^2
-		multithread Etest += ((stest[p][q][r][0] * sn[p][q][mod(r+1+numz,numz)][0]+stest[p][q][r][1] * sn[p][q][mod(r+1+numz,numz)][1]+stest[p][q][r][2] * sn[p][q][mod(r+1+numz,numz)][2])  )^2//  /(magsn6[p][q][r]*magstest[p][q][r]))^2
+	// calculate the energy of the test point
+	
+	// first kind of energy is proportional to the alignment dotted into the existing neighbors (this energy is negative = more alignment is lower energy)
+		multithread Etest =  ((stest[p][q][r][0] * sn[mod(p-1+numx,numx)][q][r][0]  +  stest[p][q][r][1] * sn[mod(p-1+numx,numx)][q][r][1]  +  stest[p][q][r][2] * sn[mod(p-1+numx,numx)][q][r][2])   )^2//  /(magsn2[p][q][r]*magstest[p][q][r]))^2
+		multithread Etest += ((stest[p][q][r][0] * sn[mod(p+1+numx,numx)][q][r][0]  +  stest[p][q][r][1] * sn[mod(p+1+numx,numx)][q][r][1]  +  stest[p][q][r][2] * sn[mod(p+1+numx,numx)][q][r][2])   )^2//  /(magsn2[p][q][r]*magstest[p][q][r]))^2
+		multithread Etest += ((stest[p][q][r][0] * sn[p][mod(q-1+numy,numy)][r][0]  +  stest[p][q][r][1] * sn[p][mod(q-1+numy,numy)][r][1]  +  stest[p][q][r][2] * sn[p][mod(q-1+numy,numy)][r][2])   )^2//  /(magsn3[p][q][r]*magstest[p][q][r]))^2
+		multithread Etest += ((stest[p][q][r][0] * sn[p][mod(q+1+numy,numy)][r][0]  +  stest[p][q][r][1] * sn[p][mod(q+1+numy,numy)][r][1]  +  stest[p][q][r][2] * sn[p][mod(q+1+numy,numy)][r][2])   )^2//  /(magsn4[p][q][r]*magstest[p][q][r]))^2
+		multithread Etest += ((stest[p][q][r][0] * sn[p][q][mod(r-1+numz,numz)][0]  +  stest[p][q][r][1] * sn[p][q][mod(r-1+numz,numz)][1]  +  stest[p][q][r][2] * sn[p][q][mod(r-1+numz,numz)][2])   )^2//  /(magsn5[p][q][r]*magstest[p][q][r]))^2
+		multithread Etest += ((stest[p][q][r][0] * sn[p][q][mod(r+1+numz,numz)][0]  +  stest[p][q][r][1] * sn[p][q][mod(r+1+numz,numz)][1]  +  stest[p][q][r][2] * sn[p][q][mod(r+1+numz,numz)][2])   )^2//  /(magsn6[p][q][r]*magstest[p][q][r]))^2
 		multithread Etest *= Ec // lower energy if aligned with neighbors// between 0 and 6, 
-		multithread Etest += Ea * 2*((magsn1[p][q][r] + magsn2[p][q][r] + magsn3[p][q][r] + magsn4[p][q][r] + magsn5[p][q][r] + magsn6[p][q][r])/6 - magstest[p][q][r])^2 // magnitudes, between 0 and 6,  0 - magnitude is average of neighboring
-		multithread Etest += Ea * ((magsn7[p][q][r] + magsn8[p][q][r] + magsn9[p][q][r] + magsn10[p][q][r] + magsn11[p][q][r] + magsn12[p][q][r] +magsn13[p][q][r] + magsn14[p][q][r] + magsn15[p][q][r] + magsn16[p][q][r] + magsn17[p][q][r] + magsn18[p][q][r])/12 - magstest[p][q][r])^2 // magnitudes, between 0 and 6,  0 - magnitude is average of neighboring
+		
+	// second energy is the cost of the total difference of magnitude between near voxels  so if this cell is far from the average alignment of its neighbors, this pulls it back towards that average
+		multithread Etest += Ea * 2*((magsn1[p][q][r] + magsn2[p][q][r] + magsn3[p][q][r] + magsn4[p][q][r]  + magsn5[p][q][r]  + magsn6[p][q][r])/6 - magstest[p][q][r])^2 // magnitudes, between 0 and 6,  0 - magnitude is average of neighboring
+		multithread Etest += Ea *   ((magsn7[p][q][r] + magsn8[p][q][r] + magsn9[p][q][r] + magsn10[p][q][r] + magsn11[p][q][r] + magsn12[p][q][r] + magsn13[p][q][r] + magsn14[p][q][r] + magsn15[p][q][r] + magsn16[p][q][r] + magsn17[p][q][r] + magsn18[p][q][r])/12 - magstest[p][q][r])^2 // magnitudes, between 0 and 6,  0 - magnitude is average of neighboring
+	
+	
+	// This is the test of alignment at all.  entropic cost of having any alignment at all
 		multithread Etest += Eb * ( stest[p][q][r][0]^2 + stest[p][q][r][1]^2+ stest[p][q][r][2]^2 ) // entropic cost of alignment
+	
+	// driving force from templated alignment field
+	// this is the energetic cost of being the same (or different) alignment from the template field (typically a gradient of the morphology)
 		multithread Etest += Es * abs(stest[p][q][r][0] *sb[p][q][r][0] + stest[p][q][r][1] * sb[p][q][r][1] + stest[p][q][r][2] * sb[p][q][r][2] )
 		multithread Etest -= Es * sqrt((stest[p][q][r][1] *sb[p][q][r][0] - stest[p][q][r][0] * sb[p][q][r][1])^2  + (stest[p][q][r][2] *sb[p][q][r][0] - stest[p][q][r][0] * sb[p][q][r][2])^2  + (stest[p][q][r][1] *sb[p][q][r][2] - stest[p][q][r][2] * sb[p][q][r][1])^2 ) // lower energy, the better aligned with boundary
 
-		
+	// do the exact same calculation with the nominal point
 		multithread En = ((sn[p][q][r][0] * sn[mod(p-1+numx,numx)][q][r][0]+sn[p][q][r][1] * sn[mod(p-1+numx,numx)][q][r][1]+sn[p][q][r][2] * sn[mod(p-1+numx,numx)][q][r][2])   )^2//  /(magsn2[p][q][r]*magsn[p][q][r]))^2
 		multithread En += ((sn[p][q][r][0] * sn[mod(p+1+numx,numx)][q][r][0]+sn[p][q][r][1] * sn[mod(p+1+numx,numx)][q][r][1]+sn[p][q][r][2] * sn[mod(p+1+numx,numx)][q][r][2])   )^2//  /(magsn2[p][q][r]*magsn[p][q][r]))^2
 		multithread En += ((sn[p][q][r][0] * sn[p][mod(q-1+numy,numy)][r][0]+sn[p][q][r][1] * sn[p][mod(q-1+numy,numy)][r][1]+sn[p][q][r][2] * sn[p][mod(q-1+numy,numy)][r][2])   )^2//  /(magsn3[p][q][r]*magsn[p][q][r]))^2
@@ -1721,12 +1733,13 @@ function evolvesystem(sn,sb,Ec,Ea,Eb,Es,jump,temp,n,s3d)
 		
 		addtologbook(s3d," - Alignment Step " + num2str(i) + " of "+num2str(n)+ "  -  Total Alignment Energy : " + num2str(mean(En)))
 //metropolis algorithm 
-		multithread tempw[][][] = Exp(-(Etest[p][q][r]- En[p][q][r])/temp) > enoise(.5)+.5 ? 1 : 0 // one test for all three components at each location ie, don't just keep the x component and throw the y and z out
-		multithread sn[][][][] = tempw[p][q][r] ? stest[p][q][r][t] : sn[p][q][r][t]
+	// calculate the "temperature" based on the difference of energy of each point - if it beats a random threshold, then keep it
+		multithread tempw[][][] = Exp(-(Etest[p][q][r]- En[p][q][r])/temp) > enoise(.5)+.5 ? 1 : 0 // one test for all three components at each location i.e. don't just keep the x component and throw the y and z out
+		multithread sn[][][][] = tempw[p][q][r] ? stest[p][q][r][t] : sn[p][q][r][t] // if the test passed, update the point
 		//multithread sn[][][][1] *= sn[p][q][r][0] < 0 ? -1 : 1
 		//multithread sn[][][][2] *= sn[p][q][r][0] < 0 ? -1 : 1
 		//multithread sn[][][][0] *= sn[p][q][r][0] < 0 ? -1 : 1
-		
+// make the display
 		multithread xcomp = sn[10][xloc][yloc][0]
 		multithread ycomp = sn[10][xloc][yloc][1]
 		multithread zcomp = sn[10][xloc][yloc][2]
@@ -2377,7 +2390,7 @@ function /s addcontrols(controllist)
 			varname = uniquename(cleanupname(titlestr,0),3,1,"ScatteringSimPanel")
 			variable /g $varname = (str2num(val))
 			ctrlname = uniquename(cleanupname(titlestr,0),15,1,"ScatteringSimPanel")
-			SetVariable $ctrlname win=ScatteringSimPanel, title=titlestr, pos={width,height}, size={200,25}, variable=$varname
+			SetVariable $ctrlname win=ScatteringSimPanel, title=titlestr, pos={width,height}, size={200,25}, variable=$varname,limits={-inf,inf,0}
 		elseif(stringmatch("String",controltype))
 			varname = uniquename(cleanupname(titlestr,0),3,1,"ScatteringSimPanel")
 			string /g $varname = val
@@ -4929,8 +4942,8 @@ function model3D_hd5(s3d)
 	wave /z Mat_5_alignment, Mat_5_unaligned
 	
 	
-	nvar igorrotation
-	s3d.rot = igorrotation
+	//nvar igorrotation
+	//s3d.rot = igorrotation
 	nvar igornum
 	s3d.num = igornum
 	nvar igorthickness
@@ -4943,16 +4956,16 @@ function model3D_hd5(s3d)
 	s3d.paramstring = igorparamstring
 	svar igormodelname
 	s3d.modelname = igormodelname
-	svar igorpath
-	s3d.path = igorpath
-	svar igorname
-	s3d.name = igorname
-	nvar igormovie
-	s3d.movie = igormovie
-	svar igormaterials
-	s3d.materials = igormaterials
-	svar igorefield
-	s3d.efield = igorefield
+	//svar igorpath
+	//s3d.path = igorpath
+	//svar igorname
+	//s3d.name = igorname
+	//nvar igormovie
+	//s3d.movie = igormovie
+	//svar igormaterials
+	//s3d.materials = igormaterials
+	//svar igorefield
+	//s3d.efield = igorefield
 	
 	nvar voxel_size_nm
 	s3d.voxelsize = voxel_size_nm
@@ -6048,3 +6061,187 @@ Function Analyze_sim_but(ba) : ButtonControl
 
 	return 0
 End
+
+function /s variables_multishelllattice()
+	string variables = "Total Radius is Length scale above,String,^;"
+	variables += "Core-shell Interpenetration [vx],SetVariable,0;"	//1
+	variables += "Shell-shell Interpenetration [vx],SetVariable,0;"//2
+	variables += "Shell-matrix Interpenetration [vx],SetVariable,0;"//3
+	variables += "Minimum Seperation [vx],SetVariable,1;"//4
+	variables += "Number of Particles (Max),SetVariable,5000;"//5
+	variables += "Total Radiuses sigma [vx],setvariable,0;"//6
+	variables += "Core radius [vx],SetVariable,5;"//7
+	variables += "Core radius sigma [vx],SetVariable,0;"//8
+	variables += "inner shell thickness [vx],SetVariable,2;"//9
+	variables += "inner shell thickness sigma [vx],SetVariable,0;"//10
+	variables += "Minimum total radius [vx],SetVariable,10;"//11
+	variables += "Maximum total radius [vx],SetVariable,10;"//12
+	variables += "Unit Vector 1 x,SetVariable,1;"//13
+	variables += "Unit Vector 1 y,SetVariable,.5;"//14
+	variables += "Unit Vector 2 x,SetVariable,1;"//15
+	variables += "Unit Vector 2 y,SetVariable,-.5;"//16
+	variables += "In-plane sigma local [vx],SetVariable,1;"//17
+	variables += "Out-of-plane sigma [vx],SetVariable,1;"//18
+	return variables
+end
+
+function model3D_multishelllattice(s3d)
+	//Creates an core multi shell system on a lattice
+	// lattice spacing is determined by the 2 * maximum radius + seperation
+	// upper limit on in plane and out of plane indeterminacy is determined by seperation so there can be no overlap with the next element or edge
+	
+	struct ThreeDSystem &s3d
+	if(itemsinlist(s3d.paramstring,",")<5)
+		return -1
+	endif
+	newdatafolder /o/s CreatingSpheres
+	variable coreinterpenetration = 			str2num(stringfromlist( 1 ,s3d.paramstring,","))
+	variable innershellinterpenetration = 	str2num(stringfromlist( 2 ,s3d.paramstring,","))
+	variable outershellinterpenetration = 	str2num(stringfromlist( 3 ,s3d.paramstring,","))
+	variable minsep = 				str2num(stringfromlist( 4 ,s3d.paramstring,","))+1
+	variable particlesnum = 		str2num(stringfromlist( 5 ,s3d.paramstring,","))
+	variable pd = 					str2num(stringfromlist( 6 ,s3d.paramstring,","))
+	variable thickness = 			s3d.thickness
+	variable corerad = 			str2num(stringfromlist( 7 ,s3d.paramstring,","))
+	variable coresig = 			str2num(stringfromlist( 8 ,s3d.paramstring,","))
+	variable innershell = 		str2num(stringfromlist( 9 ,s3d.paramstring,","))
+	variable innershellsig =		str2num(stringfromlist( 10 ,s3d.paramstring,","))
+	variable minradius = 			str2num(stringfromlist( 11 ,s3d.paramstring,","))
+	variable maxradius = 			min(str2num(stringfromlist( 12 ,s3d.paramstring,",")),thickness/2)
+	variable unitv1x = 			str2num(stringfromlist( 13 ,s3d.paramstring,","))
+	variable unitv1y = 			str2num(stringfromlist( 14 ,s3d.paramstring,","))
+	variable unitv2x = 			str2num(stringfromlist( 15 ,s3d.paramstring,","))
+	variable unitv2y = 			str2num(stringfromlist( 16 ,s3d.paramstring,","))
+	variable inplanesig = 		str2num(stringfromlist( 17 ,s3d.paramstring,","))
+	variable oopsig = 				str2num(stringfromlist( 18 ,s3d.paramstring,","))
+	
+	variable mr=floor(minradius)
+
+	
+	make /o /n=(thickness,s3d.num,s3d.num) mat=1, corew=0, inshell=0, xwave, ywave, zwave
+	
+	make/B/U /o /n=(thickness,s3d.num,s3d.num,ceil(maxradius)-floor(minradius)) exmat= (p <= t-mr) || (q <= t-mr) || (r <= t-mr) || (p >= thickness-t+mr) || (q >= s3d.num-t+mr) || (r >= s3d.num-t+mr) ? 0 : 1
+	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave
+	if(s3d.movie)
+		Execute("Spheres3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
+		Execute("exportgizmo wave=\"testimage\"  ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
+	endif
+	setscale /i x, -thickness/2, thickness/2, mat,corew, inshell
+	setscale /i y, -s3d.num/2, s3d.num/2, mat,corew, inshell
+	setscale /i z, -s3d.num/2, s3d.num/2, mat,corew, inshell
+
+	Make /O/N=0 coordy, coordz
+	make2dlattice(2*maxradius + minsep,coordy, coordz, unitv1x, unitv1y, unitv2x, unitv2y, s3d.num-maxradius-minsep/2, s3d.num-maxradius-minsep/2)
+	variable shell, core, radius, i, cx, cy, cz, mnx,mxx,mny,mxy,mnz,mxz
+	if(dimsize(coordy,0) < particlesnum)
+		particlesnum = dimsize(coordy,0)
+	endif
+	for(i=0;i<particlesnum;i+=1)
+		radius = max(minradius,min(maxradius,abs(gnoise(pd)+s3d.size)))
+		core = max(0,min(abs(gnoise(coresig)+corerad),radius))
+		shell = max(0,min(abs(gnoise(innershellsig)+innershell),radius-core))
+		cy = coordy[i] + max(-minsep/2,min(minsep/2,gnoise(inplanesig)))
+		cz = coordz[i] + max(-minsep/2,min(minsep/2,gnoise(inplanesig)))
+		cx = max(-minsep/2,min(minsep/2,gnoise(inplanesig)))
+		
+		mnx = max(0,floor(cx-radius -0.5+ thickness/2))
+		mxx = min(thickness-1,ceil(cx+radius +0.5+ thickness/2))
+		mny = max(0,floor(cy-radius -0.5+ s3d.num/2))
+		mxy = min(s3d.num-1,ceil(cy+radius +0.5+ s3d.num/2))
+		mnz = max(0,floor(cz-radius -0.5+ s3d.num/2))
+		mxz = min(s3d.num-1,ceil(cz+radius +0.5+ s3d.num/2))
+		
+		
+		// subtract out this sphere from the matrix  // matrix starts at 1s, within this sphere, multiply this by 0, outside multiply by 1
+		multithread mat[mnx,mxx][mny,mxy][mnz,mxz] *= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (radius-.5)^2 ? 0 : 1 
+		// within 1 voxel size of the edge of the sphere, partially fill the voxels (outer edge)
+		multithread mat[mnx,mxx][mny,mxy][mnz,mxz] *= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (radius-.5)^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (radius+.5)^2  ? -(radius-.5) + sqrt((x-cx)^2 + (y-cy)^2 + (z-cz)^2) : 1 
+		// same for the core
+		multithread corew[mnx,mxx][mny,mxy][mnz,mxz]+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (core-.5)^2 ? 1 : 0
+		multithread corew[mnx,mxx][mny,mxy][mnz,mxz]+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (core-.5)^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (core+.5)^2  ? (core+.5) - sqrt((x-cx)^2 + (y-cy)^2 + (z-cz)^2)  : 0
+
+		// for the shell, both sides need this treatment
+		if(shell>1)
+			//main part of shell
+			multithread inshell[mnx,mxx][mny,mxy][mnz,mxz]+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (core+.5)^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (core+shell-.5)^2  ? 1  : 0
+			// edge voxels of shell (outer edge)
+			multithread inshell[mnx,mxx][mny,mxy][mnz,mxz]+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (core+shell-.5)^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (core+shell+.5)^2  ? (core+shell+.5) - sqrt((x-cx)^2 + (y-cy)^2 + (z-cz)^2)  : 0
+			// edge voxels of shell (inner edge)
+			multithread inshell[mnx,mxx][mny,mxy][mnz,mxz]+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (core-.5)^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (core+.5)^2  ? sqrt((x-cx)^2 + (y-cy)^2 + (z-cz)^2) - (core-.5)  : 0
+		else
+			// only edge voxels
+			multithread inshell[mnx,mxx][mny,mxy][mnz,mxz]+= (x-cx)^2 + (y-cy)^2 + (z-cz)^2 > (core+.5)^2 && (x-cx)^2 + (y-cy)^2 + (z-cz)^2 <= (core+shell-.5)^2  ? 1-core-mat : 0
+		endif
+		
+		
+
+		if(s3d.movie)
+			execute("ModifyGizmo /n=Spheres3D update=2")
+			doupdate
+			Execute "exportgizmo wave=\"testimage\"   "
+			doupdate
+			savepict /p=_PictGallery_ /E=-5 /N=Spinoidal3DLayout /o as "Frame3D"
+			addmovieframe /pict=Frame3D
+		endif
+	endfor
+	setdatafolder ::
+	if (outershellinterpenetration > 0)
+		imagefilter /n=(outershellinterpenetration)/o gauss3d mat
+	endif
+	if (coreinterpenetration > 0)	
+		imagefilter /n=(coreinterpenetration)/o gauss3d corew
+	endif
+	if (innershellinterpenetration > 0)
+		imagefilter /n=(innershellinterpenetration)/o gauss3d inshell
+	endif
+	
+	duplicate /free mat, density
+	multithread density = mat[p][q][r] + corew[p][q][r] + inshell[p][q][r]
+	multithread mat -= density[p][q][r]>1 ? density[p][q][r]-1 : 0 // if we ever exceed 1 density, try to take the excess out of the matrix
+	multithread density = mat[p][q][r]<0 ? -mat[p][q][r] : 0 
+	multithread mat += density[p][q][r]
+	multithread inshell -=density[p][q][r] // if this caused matrix to go negative, try to take it out of the inner shell instead
+	multithread density = inshell[p][q][r] < 0 ? -inshell[p][q][r] : 0
+	multithread inshell += density[p][q][r]
+	multithread corew -=density[p][q][r] // if this caused inner shell to go negative, take it out of the core instead
+	if(wavemin(corew)<0) // if the core went negative, then something must be very wrong
+		print "error in density, overlapping detected, results unstable"
+	endif 
+	
+	
+	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
+	duplicate /o corew,s3d.density2 // this returns the density matrix of material 2 (the core) for alignment etc later on
+	duplicate /o inshell,s3d.density3 // this returns the density matrix of material 3 (the inner shell) for alignment etc later on
+end
+
+function make2dlattice(magnitude,coordx, coordy, unitv1x, unitv1y, unitv2x, unitv2y, numx, numy)
+	variable magnitude // the distance between lattice points
+	wave coordx // wave to store the xcoordinates
+	wave coordy // wave to store the y coordinates
+	variable unitv1x, unitv1y, unitv2x, unitv2y // unit vector components
+	variable numx, numy // size in each direction
+	// it is assumed that the lattice is centered at 0
+	// output will be a sorted list of lattice points in order of distance,
+	// filling the area from (-numx/2, -numy/2) to (numx/2, numy/2)
+	string listx
+	string listy
+	variable tempmag = max(sqrt(unitv1x^2 + unitv1y^2),sqrt(unitv2x^2 + unitv2y^2))
+	unitv1x *= magnitude / tempmag
+	unitv1y *= magnitude / tempmag
+	unitv2x *= magnitude / tempmag
+	unitv2y *= magnitude / tempmag
+	
+
+	variable num = 10* ceil(numx / magnitude)
+	make /n=(num+1,num+1) /free mag
+	redimension /n=(num+1,num+1) coordx, coordy
+	setscale /i x, -num/2,num/2,mag, coordx, coordy
+	setscale /i y, -num/2,num/2,mag, coordx, coordy
+	coordx[][] = abs((unitv1x*x) + (unitv2x*y)) <= numx/2 ? (unitv1x*x) + (unitv2x*y) : nan
+	coordy[][] = abs((unitv1y*x) + (unitv2y*y)) <= numy/2 ? (unitv1y*x) + (unitv2y*y) : nan
+	mag= sqrt(coordx^2 + coordy^2) // magnitude of this lattice vector
+	
+	sort mag,mag, coordx,coordy
+	wavestats /q mag
+	redimension /n=(v_npnts) mag, coordx, coordy
+end
