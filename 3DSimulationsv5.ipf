@@ -4608,7 +4608,7 @@ function scatterimage(folder,en,[addtolayout,qpwr,append2graph])
 		dowindow /HIDE=1 $svname
 		dowindow /HIDE=1 $sgname
 	endif
-	//azploter(en)
+	azploter(en)
 end
 
 
@@ -4906,10 +4906,13 @@ function /s special_hd5()
 	endif
 end
 
+
 function /s variables_hd5()
 	string variables = "Path,String,;RedoAlignment,Checkbox,0"
 	return variables
 end
+
+
 function model3D_hd5(s3d)
 	struct ThreeDSystem &s3d
 	if(itemsinlist(s3d.paramstring,",")<1)
@@ -4944,18 +4947,39 @@ function model3D_hd5(s3d)
 	
 	//nvar igorrotation
 	//s3d.rot = igorrotation
-	nvar igornum
-	s3d.num = igornum
+	nvar/z igornum
+	if(nvar_exists(igornum))
+		s3d.num = igornum
+	else
+		s3d.num = dimsize(Mat_1_unaligned,1)
+	endif
 	nvar igorthickness
-	s3d.thickness = igorthickness
+	if(nvar_exists(igorthickness))
+		s3d.thickness = igorthickness
+	else
+		s3d.thickness = dimsize(Mat_1_unaligned,0)
+	endif
+	
 	nvar igorvoxelsize
-	s3d.voxelsize = igorvoxelsize
+	if(nvar_exists(igorvoxelsize))
+		s3d.voxelsize = igorvoxelsize
+	endif
+	
 	nvar igormaterialnum
-	s3d.materialnum = igormaterialnum
+	if(nvar_exists(igormaterialnum))
+		s3d.materialnum = igormaterialnum
+	endif
+	
 	svar igorparamstring
-	s3d.paramstring = igorparamstring
+	if(svar_exists(igorparamstring))
+		s3d.paramstring = igorparamstring
+	endif
+	
 	svar igormodelname
-	s3d.modelname = igormodelname
+	if(svar_exists(igormodelname))
+		s3d.modelname = igormodelname
+	endif
+	
 	//svar igorpath
 	//s3d.path = igorpath
 	//svar igorname
@@ -4968,9 +4992,13 @@ function model3D_hd5(s3d)
 	//s3d.efield = igorefield
 	
 	nvar voxel_size_nm
-	s3d.voxelsize = voxel_size_nm
+	if(nvar_exists(voxel_size_nm))
+		s3d.voxelsize = voxel_size_nm
+	endif
 	svar morphology_creator
-	s3d.modelname = replacestring("EG_",morphology_creator,"")
+	if(svar_exists(morphology_creator))
+		s3d.modelname = replacestring("EG_",morphology_creator,"")
+	endif
 	
 	setdatafolder ::
 	
