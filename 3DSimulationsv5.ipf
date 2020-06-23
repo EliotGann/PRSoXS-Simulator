@@ -6167,7 +6167,7 @@ function model3D_multishelllattice(s3d)
 		shell = max(0,min(abs(gnoise(innershellsig)+innershell),radius-core))
 		cy = coordy[i] + max(-minsep/2,min(minsep/2,gnoise(inplanesig)))
 		cz = coordz[i] + max(-minsep/2,min(minsep/2,gnoise(inplanesig)))
-		cx = max(-minsep/2,min(minsep/2,gnoise(inplanesig)))
+		cx = max(-minsep/2,min(minsep/2,gnoise(oopsig)))
 		
 		mnx = max(0,floor(cx-radius -0.5+ thickness/2))
 		mxx = min(thickness-1,ceil(cx+radius +0.5+ thickness/2))
