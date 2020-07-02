@@ -1620,7 +1620,7 @@ function /wave createalignmentdensity(wavein,sigma,intensity, alignment, s3d)
 	make/o/n=50 temphist;histogram /B=1 interfaceloc, temphist
 	findpeak/Q temphist
 	magscale = V_PeakLoc
-	multithread interfaceloc = interfaceloc > magscale ? 1 : interfaceloc/magscale
+	multithread interfaceloc = interfaceloc > magscale ? 1 : intensity*interfaceloc/magscale
 	sn[][][][0,2] *= interfaceloc[p][q][r]
 	sn[][][][3] = 1 - sn[p][q][r][0]^2- sn[p][q][r][1]^2- sn[p][q][r][2]^2
 	return sn
