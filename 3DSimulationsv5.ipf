@@ -365,6 +365,10 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		writeconfig(s3d,replacestring(".mov",replacestring(".mp4",moviepath,":"),":"),energymin, energymax,enstep)
 		variable h5file, groupid
 		HDF5CreateFile /p=cyrsoxspath/O h5file as parsefilepath(0,replacestring("mov",replacestring("mp4",moviepath,"hd5"),"hd5"),":",1,0)
+		
+		
+		
+		/// this next chunk is the depricated vector morphology representation.  This is now replaced with angular representation
 		HDF5CreateGroup h5file , "vector_morphology" , groupID
 		newdatafolder /o/s hd5output
 		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
@@ -395,6 +399,65 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 				endif
 			endif
 		endif
+		setdatafolder ::
+		
+		// this is the new unified morphology representation (for now, both are produced for backwards compatability)
+		
+		HDF5CreateGroup h5file , "morphology" , groupID
+		newdatafolder /o/s hd5output
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_S = sqrt(s3d.m1[p][q][r][0]^2 + s3d.m1[p][q][r][1]^2 + s3d.m1[p][q][r][2]^2) 
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_Phi = atan(s3d.m1[p][q][r][0]/s3d.m1[p][q][r][1])
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_Theta = acos(s3d.m1[p][q][r][2]/Mat_1_S[p][q][r])
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_vfrac = s3d.m1[p][q][r][3] + Mat_1_S[p][q][r]
+		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_S, groupiD
+		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_Phi, groupiD
+		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_Theta, groupiD
+		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_vfrac, groupiD
+		if(waveexists(s3d.m2))
+			make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_2_S = sqrt(s3d.m2[p][q][r][0]^2 + s3d.m2[p][q][r][1]^2 + s3d.m2[p][q][r][2]^2) 
+			make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_2_Phi = atan(s3d.m2[p][q][r][0]/s3d.m2[p][q][r][1])
+			make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_2_Theta = acos(s3d.m2[p][q][r][2]/Mat_2_S[p][q][r])
+			make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_2_vfrac = s3d.m2[p][q][r][3] + Mat_2_S[p][q][r]
+			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_S, groupiD
+			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_Phi, groupiD
+			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_Theta, groupiD
+			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_vfrac, groupiD
+			if(waveexists(s3d.m3))
+				make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_3_S = sqrt(s3d.m3[p][q][r][0]^2 + s3d.m3[p][q][r][1]^2 + s3d.m3[p][q][r][2]^2) 
+				make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_3_Phi = atan(s3d.m3[p][q][r][0]/s3d.m3[p][q][r][1])
+				make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_3_Theta = acos(s3d.m3[p][q][r][2]/mat_3_S[p][q][r])
+				make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_3_vfrac = s3d.m3[p][q][r][3] + mat_3_S[p][q][r]
+				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_3_S, groupiD
+				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_3_Phi, groupiD
+				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_3_Theta, groupiD
+				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_3_vfrac, groupiD
+				if(waveexists(s3d.m4))
+					make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_4_S = sqrt(s3d.m4[p][q][r][0]^2 + s3d.m4[p][q][r][1]^2 + s3d.m4[p][q][r][2]^2) 
+					make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_4_Phi = atan(s3d.m4[p][q][r][0]/s3d.m4[p][q][r][1])
+					make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_4_Theta = acos(s3d.m4[p][q][r][2]/mat_4_S[p][q][r])
+					make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_4_vfrac = s3d.m4[p][q][r][3] + mat_4_S[p][q][r]
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_4_S, groupiD
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_4_Phi, groupiD
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_4_Theta, groupiD
+					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_4_vfrac, groupiD
+					if(waveexists(s3d.m5))
+						make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_5_S = sqrt(s3d.m5[p][q][r][0]^2 + s3d.m2[p][q][r][1]^2 + s3d.m2[p][q][r][2]^2) 
+						make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_5_Phi = atan(s3d.m2[p][q][r][0]/s3d.m2[p][q][r][1])
+						make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_5_Theta = acos(s3d.m2[p][q][r][2]/mat_5_S[p][q][r])
+						make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d mat_5_vfrac = s3d.m2[p][q][r][3] + mat_5_S[p][q][r]
+						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_5_S, groupiD
+						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_5_Phi, groupiD
+						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_5_Theta, groupiD
+						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} mat_5_vfrac, groupiD
+					endif
+				endif
+			endif
+		endif
+		
+		
+		
+		
+		
 		
 		newdatafolder /o/s igor_paramaters
 		
@@ -2124,18 +2187,18 @@ window Spheres3Ddisp(size, densitywaveloc) : GizmoPlot
 	ModifyGizmo userString={wmgizmo_df,"Gizmo0"}
 	ModifyGizmo endRecMacro
 End
-window FIbrals3Ddisp(size, densitywaveloc) : GizmoPlot
+window fibrils3Ddisp(size, densitywaveloc) : GizmoPlot
 	variable size
 	string densitywaveloc
 	PauseUpdate; Silent 1	// Building Gizmo 6 window...
-	dowindow /k Fibrals3D
+	dowindow /k fibrils3D
 	// Do nothing if the Gizmo XOP is not available.
 	if(exists("NewGizmo")!=4)
 		DoAlert 0, "Gizmo XOP must be installed"
 		return 0
 	endif
 
-	NewGizmo/N=Fibrals3D/T="3D Fibrals" /W=(30,30,1310,1054) /k=1
+	NewGizmo/N=fibrils3D/T="3D fibrils" /W=(30,30,1310,1054) /k=1
 	ModifyGizmo startRecMacro
 	ModifyGizmo scalingMode=8
 	ModifyGizmo setOuterBox={0,size,0,size,0,size}
@@ -2751,45 +2814,47 @@ Function UserPreCalcChk(cba) : CheckBoxControl
 
 	return 0
 End
-function /s variables_fibrals()
+function /s variables_fibrils()
 	string variables
 	variables = "Interpenetration [voxels],SetVariable,2;"
-	variables = variables + "Number of Fibrals (Max),SetVariable,500;"
+	variables = variables + "Number of Fibrils (Max),SetVariable,1000;"
 	variables = variables + "PolyDispursity (sigma of radiuses),setvariable,1;"
-	variables = variables + "Minimum Radius,SetVariable,1;"
-	variables = variables + "Maximum Radius,SetVariable,5;"
+	variables = variables + "Minimum Radius,SetVariable,2;"
+	variables = variables + "Maximum Radius,SetVariable,4;"
 	variables = variables + "Sigma (around x-plane in degrees),SetVariable,5;"
 	variables = variables + "Volume Fraction (<1),SetVariable,.5;"
 	variables = variables + "Noise,SetVariable,0;"
 	variables = variables + "Minimum Seperation,SetVariable,0.3;"
-	variables = variables + "Minimum Fibral Length,SetVariable,5;"
-	variables = variables + "Maximum Fibral Length,SetVariable,40;"
-	variables = variables + "ShellAlignment,SetVariable,1;"
+	variables = variables + "Minimum Fibril Length,SetVariable,20;"
+	variables = variables + "Maximum Fibril Length,SetVariable,100;"
+	variables = variables + "Shell only (>0 align shell),SetVariable,0;"
+	variables = variables + "Type (0=para),SetVariable,0;"
 	return variables
 end
-function /s special_fibrals()
+function /s special_fibrils()
 	return "IncludesAlignment"
 end
-function model3D_fibrals(s3d)
+function model3D_fibrils(s3d)
 
 	struct ThreeDSystem &s3d
 	if(itemsinlist(s3d.paramstring,",")<11)
 		return -1
 	endif
-	newdatafolder /o/s CreatingFibrals
-	variable interpenetration = 	str2num(stringfromlist( 0 ,s3d.paramstring,","))
-	variable Fibralnum = 		str2num(stringfromlist( 1 ,s3d.paramstring,","))
-	variable pd = 				str2num(stringfromlist( 2 ,s3d.paramstring,","))
-	variable thickness = 		s3d.thickness
-	variable minsize = 		str2num(stringfromlist( 3 ,s3d.paramstring,","))
-	variable maxsize = 		str2num(stringfromlist( 4 ,s3d.paramstring,","))
-	variable angsigma = 		str2num(stringfromlist( 5 ,s3d.paramstring,","))
+	newdatafolder /o/s Creatingfibrils
+	variable interpenetration =	str2num(stringfromlist( 0 ,s3d.paramstring,","))
+	variable Fibrilnum = 			str2num(stringfromlist( 1 ,s3d.paramstring,","))
+	variable pd = 					str2num(stringfromlist( 2 ,s3d.paramstring,","))
+	variable thickness = 			s3d.thickness
+	variable minsize = 			str2num(stringfromlist( 3 ,s3d.paramstring,","))
+	variable maxsize = 			str2num(stringfromlist( 4 ,s3d.paramstring,","))
+	variable angsigma = 			str2num(stringfromlist( 5 ,s3d.paramstring,","))
 	variable volfrac = 			str2num(stringfromlist( 6 ,s3d.paramstring,","))
-	variable noise = 			str2num(stringfromlist( 7 ,s3d.paramstring,","))
-	variable minsep = 		str2num(stringfromlist( 8 ,s3d.paramstring,","))
-	variable minlength = 		str2num(stringfromlist( 9 ,s3d.paramstring,","))
-	variable maxlength = 		str2num(stringfromlist( 10 ,s3d.paramstring,","))
-	variable shellalignment = str2num(stringfromlist( 11 ,s3d.paramstring,","))
+	variable noise = 				str2num(stringfromlist( 7 ,s3d.paramstring,","))
+	variable minsep = 				str2num(stringfromlist( 8 ,s3d.paramstring,","))
+	variable minlength = 			str2num(stringfromlist( 9 ,s3d.paramstring,","))
+	variable maxlength = 			str2num(stringfromlist( 10 ,s3d.paramstring,","))
+	variable shellalignment =  str2num(stringfromlist( 11 ,s3d.paramstring,","))
+	variable type = 				str2num(stringfromlist( 12 ,s3d.paramstring,","))
 	
 	make /n=(thickness*s3d.num^2,3)/o rmat
 	make /o /n=(thickness,s3d.num,s3d.num) mat=0,xwave, ywave, zwave, ammat=0
@@ -2801,7 +2866,7 @@ function model3D_fibrals(s3d)
 	endif
 	make/B/U /o /n=(thickness,s3d.num,s3d.num) tempwave, tempx
 	if(s3d.movie)
-		Execute("Fibrals3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
+		Execute("fibrils3Ddisp(" +num2str(s3d.num)+", \""+getwavesdatafolder(mat,2)+"\")")
 		Execute("exportgizmo wave=\"testimage\"   ;Spinoidal3DLayout();Spinoidal3DImage(\""+getdatafolder(1)+"testimage\")")
 	endif
 
@@ -2815,8 +2880,8 @@ function model3D_fibrals(s3d)
 	variable testcx,testcy,testcz,i,radius, orad, cx, cy, cz, failed, fnum =0, f2num=0, xmn,xmx,ymn,ymx,zmn,zmx, loc, qfnum=0, theta, phi
 	variable tx,ty,tz,hit, mx=thickness-1, my=s3d.num-1, mz=s3d.num-1, length
 	fnum=0
-	make /o /n=3 vec
-	for(i=0;i<Fibralnum;i+=1)
+	make /o /n=3 vec, tvec
+	for(i=0;i<fibrilnum;i+=1)
 		radius=max(1,gnoise(pd)+s3d.size)
 		tempx = exmat[p][q][r][ceil(radius)]
 		duplicate /o tempx, tempwave
@@ -2827,7 +2892,7 @@ function model3D_fibrals(s3d)
 			if(fnum<5)
 				continue
 			else
-				print "warning:  can't fit in anymore fibrals, only " + num2str(i-fnum) + " fibrals were created"
+				print "warning:  can't fit in anymore fibrils, only " + num2str(i-fnum) + " fibrils were created"
 				break
 			endif
 		endif
@@ -2837,13 +2902,30 @@ function model3D_fibrals(s3d)
 		cy = rmat[loc][1]
 		cz = rmat[loc][2]
 		
-		theta = (90 + gnoise(angsigma)) * pi / 180 // polar angle of the fibral axis relative to the film normal (right now it is mostly in plane)
-		phi = enoise(pi)  // (azimuthal angle of the axis of the fibral)
+		theta = (90 + gnoise(angsigma)) * pi / 180 // polar angle of the fibril axis relative to the film normal (right now it is mostly in plane)
+		phi = enoise(pi)  // (azimuthal angle of the axis of the fibril)
 		vec[2] = sin(theta)*cos(phi)
 		vec[1] = sin(theta)*sin(phi)
 		vec[0] = cos(theta)
 		
-		// for Micelles, change the above angles, so that they are oriented how you want in the plane (right now the 
+		if(type) // perpindicular type, where alignment is perpindicular (random) relative to the fibril axis
+		
+			variable randth = enoise(pi) + pi
+			variable randph = enoise(pi/2) + pi/2
+			
+			string normvs = normvecs(vec[0],vec[1],vec[2],rand=1)
+			
+			tvec[0] = str2num(stringfromlist(0,normvs,","))
+			tvec[1] = str2num(stringfromlist(1,normvs,","))
+			tvec[2] = str2num(stringfromlist(2,normvs,","))
+		else
+			// normal type, where alignment is the same direction of the fibril axis
+			tvec[0] = vec[0]
+			tvec[1] = vec[1]
+			tvec[2] = vec[2]
+		endif
+		// for Micelles, change the above angles, so that they are oriented how you want in the plane (right now they are largely in-plane)
+		
 		
 		//forward direction
 		hit=0
@@ -2853,18 +2935,17 @@ function model3D_fibrals(s3d)
 		tz=cz
 		do
 			
-			if(shellalignment>0)
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < radius^2  && ammat[p][q][r]==0? vec[t] : vecmat
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? 0 : vecmat
-				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? 1 : ammat
-			elseif(shellalignment < 0)
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? vec[t] : vecmat
-				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]   = (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-1.5)^2 &&  (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 && abs(vecmat[p][q][r][0])+abs(vecmat[p][q][r][1])+abs(vecmat[p][q][r][2])==0? 1 : ammat
+			if(shellalignment)
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-1.5)^2 ? 1 : ammat
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ammat[p][q][r]==0 && ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2) ? tvec[t] : vecmat
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ammat[p][q][r]==1 ? 0 : vecmat
+			else
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
+				//ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]   = (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius)^2 ? 1 : ammat
 			endif
-			// for micelles change the above line, (right now it's just making the dipole alignment in line with the fibral main axis)
+			// for micelles change the above line, (right now it's just making the dipole alignment in line with the fibril main axis)
 			// radial, and two materials
 			// need to add another material outer core, and add to exmat, probably with a core shell diameter parameters needed
-			
 			
 			exmat[max(tx-radius-maxsize,0),min(tx+radius+maxsize,mx)][max(ty-radius-maxsize,0),min(ty+radius+maxsize,my)][max(tz-radius-maxsize,0),min(tz+radius+maxsize,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius+t)^2 ? 0 : exmat
 			tx += vec[0]
@@ -2880,27 +2961,29 @@ function model3D_fibrals(s3d)
 		tz=cz
 		length-=1
 		do
-			if(shellalignment>0)
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < radius^2  && ammat[p][q][r]==0? vec[t] : vecmat
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? 0 : vecmat
-				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? 1 : ammat
-			elseif(shellalignment < 0)
-				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius-1.5)^2 ? vec[t] : vecmat
-				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]   = (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-1.5)^2 &&  (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 && abs(vecmat[p][q][r][0])+abs(vecmat[p][q][r][1])+abs(vecmat[p][q][r][2])==0? 1 : ammat
+			if(shellalignment)
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-1.5)^2 ? 1 : ammat
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ammat[p][q][r]==0 && ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2 ) ? tvec[t] : vecmat
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ammat[p][q][r]==1 ? 0 : vecmat
+			else
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
+				//ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]   = (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius)^2 ? 1 : ammat
 			endif
 			
 			exmat[max(tx-radius-maxsize,0),min(tx+radius+maxsize,mx)][max(ty-radius-maxsize,0),min(ty+radius+maxsize,my)][max(tz-radius-maxsize,0),min(tz+radius+maxsize,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius+t)^2 ? 0 : exmat
 			tx -= vec[0]
 			ty -= vec[1]
 			tz -= vec[2]
-			hit = 1-tempx[Min(max(tx,0),mx)][Min(max(ty,0),my)][Min(max(tz,0),mz)] // if we hit another fibral or the edge, tempx will be 0 (hit will be 1)  -  until then, hit will equal 0
+			// we are traveling along the vec direction, for type two fibril, you would have to add another vector 90 degrees from this.  still use vec for propogation, use the other for the crystal orientation.
+			
+			hit = 1-tempx[Min(max(tx,0),mx)][Min(max(ty,0),my)][Min(max(tz,0),mz)] // if we hit another fibril or the edge, tempx will be 0 (hit will be 1)  -  until then, hit will equal 0
 			length+=1
 		while( length<maxlength && hit==0 && tx <= mx && ty <= my && tz <= mz && tx>=0 && ty>=0 && tz>=0 )
 
 		mat = sqrt( vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r])
 		imagefilter /n=3 /o gauss3d, mat
 		if(s3d.movie)
-			execute("ModifyGizmo /n=Fibrals3D update=2")
+			execute("ModifyGizmo /n=fibrils3D update=2")
 			doupdate
 			Execute "exportgizmo wave=\"testimage\"   "
 			//TextBox/w=Spinoidal3DLayout/C/N=text0/A=LT/X=0.00/Y=0.00 "\Z32" + time2str2(ttot)
@@ -2910,12 +2993,12 @@ function model3D_fibrals(s3d)
 		endif
 		
 		if(length < minlength)
-			//print "Created a fibral too short"
+			//print "Created a fibril too short"
 			f2num+=1
 		endif
 		
 		if(f2num>5 + i/10) // if ever more than 10% + 5 are short, then let's stop
-			print "too many short fibrals have been created, ending fibral creation"
+			print "too many short fibrils have been created, ending fibril creation"
 			break
 		endif
 		
@@ -2931,19 +3014,19 @@ function model3D_fibrals(s3d)
 		imagefilter /n=(interpenetration) /o gauss3d, mat
 		vecmat[][][][2] = mat[p][q][r]
 	endif
-	mat = sqrt( vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r])
+	mat = vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r]
 	
 	setdatafolder ::
-	variable fibralvol = mean(mat)
-	variable rhomatrix = (volfrac - fibralvol)/(1-fibralvol)
+	variable fibrilvol = mean(mat)
+	variable rhomatrix = (volfrac - fibrilvol)/(1-fibrilvol)
 	if(rhomatrix < 0 )
-		print "Volume fraction is too low, make less fibrals"
+		print "Volume fraction is too low, make less fibrils"
 		return -1
 	endif
 	make /n=(thickness,s3d.num,s3d.num,4) /o m1=0, m2=0
 	wave s3d.m1=m1, s3d.m2=m2
 	s3d.m1[][][][0,2] = vecmat[p][q][r][t]
-	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]- ammat[p][q][r]) + ammat[p][q][r]
+	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]) + ammat[p][q][r]
 	s3d.m2[][][][3] = (1-rhomatrix) * (1-mat[p][q][r])
 	
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
@@ -3579,7 +3662,7 @@ function /s normvecs(xin, yin, zin,[rand])
 	variable nx1, nx2, ny1, ny2, nz1, nz2, mag
 	string outvecs // the output of the function as a list of two vectors "x,y,z;a,b,c"
 	if(rand)
-		make /free win={xin, yin, zin}, wo1={enoise(1),enoise(1),enoise(1)}, wo2={-wo1[1],wo1[0],wo1[3]+3}
+		make /free win={xin, yin, zin}, wo1={enoise(1),enoise(1),enoise(1)}, wo2={-wo1[1],wo1[0],wo1[3]}
 		wo1 /=norm(wo1)
 		wo2 /=norm(wo2)
 	else
@@ -4437,8 +4520,8 @@ function doalignmentmap(folder,[addtolayout])
 		string foldersave = getdatafolder(1)
 		setdatafolder root:Packages:ScatterSim3D:$folder
 	endif
-	wave m=m3save
-	wave /z m2 = m1save
+	wave m=m1
+	wave /z m2 = m2
 	wave density1
 	wave /z density2
 	wave /z density3
@@ -4914,6 +4997,147 @@ end
 
 
 function model3D_hd5(s3d)
+	struct ThreeDSystem &s3d
+	if(itemsinlist(s3d.paramstring,",")<1)
+		return -1
+	endif
+	string filepath = stringfromlist(0,s3d.paramstring,",")
+	variable/g redoalignment = str2num(stringfromlist(1,s3d.paramstring,","))
+	variable hfile
+	
+	HDF5OpenFile /z /r hfile as filepath
+	if(v_flag)
+		HDF5OpenFile /i/r hfile as filepath
+	endif
+	if(v_flag)
+		addtologbook(s3d,"Failed to open file successfully. Check filepath validity")
+		return -1
+	endif
+	
+	newdatafolder /o hdf5matrices
+	
+	HDF5LoadGroup /o hdf5matrices, hfile, "vector_morphology"
+	HDF5LoadGroup /o hdf5matrices, hfile, "igor_parameters"
+	HDF5LoadGroup /o hdf5matrices, hfile, "morphology_variables"
+	
+	setdatafolder hdf5matrices
+	wave /z Mat_1_S,Mat_1_Phi,Mat_1_Theta, Mat_1_vfrac
+	wave /z Mat_2_S,Mat_2_Phi,Mat_2_Theta, Mat_2_vfrac
+	wave /z Mat_3_S,Mat_3_Phi,Mat_3_Theta, Mat_3_vfrac
+	wave /z Mat_4_S,Mat_4_Phi,Mat_4_Theta, Mat_4_vfrac
+	wave /z Mat_5_S,Mat_5_Phi,Mat_5_Theta, Mat_5_vfrac
+	
+	
+	//nvar igorrotation
+	//s3d.rot = igorrotation
+	nvar/z igornum
+	if(nvar_exists(igornum))
+		s3d.num = igornum
+	else
+		s3d.num = dimsize(Mat_1_vfrac,1)
+	endif
+	nvar igorthickness
+	if(nvar_exists(igorthickness))
+		s3d.thickness = igorthickness
+	else
+		s3d.thickness = dimsize(Mat_1_vfrac,0)
+	endif
+	
+	nvar igorvoxelsize
+	if(nvar_exists(igorvoxelsize))
+		s3d.voxelsize = igorvoxelsize
+	endif
+	
+	nvar igormaterialnum
+	if(nvar_exists(igormaterialnum))
+		s3d.materialnum = igormaterialnum
+	endif
+	
+	svar igorparamstring
+	if(svar_exists(igorparamstring))
+		s3d.paramstring = igorparamstring
+	endif
+	
+	svar igormodelname
+	if(svar_exists(igormodelname))
+		s3d.modelname = igormodelname
+	endif
+	
+	//svar igorpath
+	//s3d.path = igorpath
+	//svar igorname
+	//s3d.name = igorname
+	//nvar igormovie
+	//s3d.movie = igormovie
+	//svar igormaterials
+	//s3d.materials = igormaterials
+	//svar igorefield
+	//s3d.efield = igorefield
+	
+	nvar voxel_size_nm
+	if(nvar_exists(voxel_size_nm))
+		s3d.voxelsize = voxel_size_nm
+	endif
+	svar morphology_creator
+	if(svar_exists(morphology_creator))
+		s3d.modelname = replacestring("EG_",morphology_creator,"")
+	endif
+	
+	setdatafolder ::
+	
+	
+	if(waveexists(Mat_1_S))
+		duplicate /o Mat_1_vfrac, s3d.density1
+		make /n=(dimsize(mat_1_S,0),dimsize(mat_1_S,1),dimsize(mat_1_S,2),4) s3d.m1
+		s3d.m1[][][][0] = mat_1_S * sin(mat_1_Theta) * cos(mat_1_Phi)
+		s3d.m1[][][][1] = mat_1_S * sin(mat_1_Theta) * sin(mat_1_Phi)
+		s3d.m1[][][][2] = mat_1_S * cos(mat_1_Theta)
+		s3d.m1[][][][3] = 	Mat_1_vfrac[p][q][r] - Mat_1_S[p][q][r]
+	endif
+	if(waveexists(mat_2_S))
+		duplicate /o mat_2_vfrac, s3d.density2
+		make /n=(dimsize(mat_2_S,0),dimsize(mat_2_S,1),dimsize(mat_2_S,2),4) s3d.m2
+		s3d.m2[][][][0] = mat_2_S * sin(mat_2_Theta) * cos(mat_2_Phi)
+		s3d.m2[][][][1] = mat_2_S * sin(mat_2_Theta) * sin(mat_2_Phi)
+		s3d.m2[][][][2] = mat_2_S * cos(mat_2_Theta)
+		s3d.m2[][][][3] = 	mat_2_vfrac[p][q][r] - mat_2_S[p][q][r]
+	endif
+	if(waveexists(mat_3_S))
+		duplicate /o mat_3_vfrac, s3d.density3
+		make /n=(dimsize(mat_3_S,0),dimsize(mat_3_S,1),dimsize(mat_3_S,2),4) s3d.m3
+		s3d.m3[][][][0] = mat_3_S * sin(mat_3_Theta) * cos(mat_3_Phi)
+		s3d.m3[][][][1] = mat_3_S * sin(mat_3_Theta) * sin(mat_3_Phi)
+		s3d.m3[][][][2] = mat_3_S * cos(mat_3_Theta)
+		s3d.m3[][][][3] = 	mat_3_vfrac[p][q][r] - mat_3_S[p][q][r]
+	endif
+	if(waveexists(mat_4_S))
+		duplicate /o mat_4_vfrac, s3d.density4
+		make /n=(dimsize(mat_4_S,0),dimsize(mat_4_S,1),dimsize(mat_4_S,2),4) s3d.m4
+		s3d.m4[][][][0] = mat_4_S * sin(mat_4_Theta) * cos(mat_4_Phi)
+		s3d.m4[][][][1] = mat_4_S * sin(mat_4_Theta) * sin(mat_4_Phi)
+		s3d.m4[][][][2] = mat_4_S * cos(mat_4_Theta)
+		s3d.m4[][][][3] = 	mat_4_vfrac[p][q][r] - mat_4_S[p][q][r]
+	endif
+	if(waveexists(mat_5_S))
+		duplicate /o mat_5_vfrac, s3d.density5
+		make /n=(dimsize(mat_5_S,0),dimsize(mat_5_S,1),dimsize(mat_5_S,2),4) s3d.m5
+		s3d.m5[][][][0] = mat_5_S * sin(mat_5_Theta) * cos(mat_5_Phi)
+		s3d.m5[][][][1] = mat_5_S * sin(mat_5_Theta) * sin(mat_5_Phi)
+		s3d.m5[][][][2] = mat_5_S * cos(mat_5_Theta)
+		s3d.m5[][][][3] = 	mat_5_vfrac[p][q][r] - mat_5_S[p][q][r]
+	endif
+	
+	HDF5CloseFile hfile
+	
+end
+
+function /s variables_oldhd5()
+	string variables = "Path,String,;RedoAlignment,Checkbox,0"
+	return variables
+end
+
+
+function model3D_oldhd5(s3d)
 	struct ThreeDSystem &s3d
 	if(itemsinlist(s3d.paramstring,",")<1)
 		return -1
