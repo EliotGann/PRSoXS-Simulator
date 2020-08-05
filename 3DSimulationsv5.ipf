@@ -2818,16 +2818,17 @@ function /s variables_fibrils()
 	string variables
 	variables = "Interpenetration [voxels],SetVariable,2;"
 	variables = variables + "Number of Fibrils (Max),SetVariable,1000;"
-	variables = variables + "PolyDispursity (sigma of radiuses),setvariable,1;"
+	variables = variables + "PolyDispursity (σ of radiuses),setvariable,1;"
 	variables = variables + "Minimum Radius,SetVariable,2;"
 	variables = variables + "Maximum Radius,SetVariable,4;"
-	variables = variables + "Sigma (around x-plane in degrees),SetVariable,5;"
+	variables = variables + "σ (around x-plane in degrees),SetVariable,5;"
 	variables = variables + "Volume Fraction (<1),SetVariable,.5;"
 	variables = variables + "Noise,SetVariable,0;"
 	variables = variables + "Minimum Seperation,SetVariable,0.3;"
 	variables = variables + "Minimum Fibril Length,SetVariable,20;"
-	variables = variables + "Maximum Fibril Length,SetVariable,100;"
-	variables = variables + "Shell only (>0 align shell),SetVariable,0;"
+	variables = variables + "Maximum Fibril Length,SetVariable,500;"
+	variables = variables + ">0 Shell - <0 Core - 0 both,SetVariable,0;"
+	variables = variables + "Shell width (0-100 %radius),SetVariable,25;"
 	variables = variables + "Type (0=para),SetVariable,0;"
 	return variables
 end
@@ -2854,7 +2855,8 @@ function model3D_fibrils(s3d)
 	variable minlength = 			str2num(stringfromlist( 9 ,s3d.paramstring,","))
 	variable maxlength = 			str2num(stringfromlist( 10 ,s3d.paramstring,","))
 	variable shellalignment =  str2num(stringfromlist( 11 ,s3d.paramstring,","))
-	variable type = 				str2num(stringfromlist( 12 ,s3d.paramstring,","))
+	variable shellwidpct =  min(100,max(0,str2num(stringfromlist( 12 ,s3d.paramstring,","))))/100
+	variable type = 				str2num(stringfromlist( 13 ,s3d.paramstring,","))
 	
 	make /n=(thickness*s3d.num^2,3)/o rmat
 	make /o /n=(thickness,s3d.num,s3d.num) mat=0,xwave, ywave, zwave, ammat=0
@@ -2878,11 +2880,13 @@ function model3D_fibrils(s3d)
 	rmat[][1] = ywave[p]
 	rmat[][2] = zwave[p]
 	variable testcx,testcy,testcz,i,radius, orad, cx, cy, cz, failed, fnum =0, f2num=0, xmn,xmx,ymn,ymx,zmn,zmx, loc, qfnum=0, theta, phi
-	variable tx,ty,tz,hit, mx=thickness-1, my=s3d.num-1, mz=s3d.num-1, length
+	variable tx,ty,tz,hit, mx=thickness-1, my=s3d.num-1, mz=s3d.num-1, length, shellwidth
 	fnum=0
 	make /o /n=3 vec, tvec
 	for(i=0;i<fibrilnum;i+=1)
 		radius=max(1,gnoise(pd)+s3d.size)
+		shellwidth = shellwidpct * radius
+		
 		tempx = exmat[p][q][r][ceil(radius)]
 		duplicate /o tempx, tempwave
 		redimension /n=(numpnts(tempwave)) tempwave
@@ -2935,17 +2939,16 @@ function model3D_fibrils(s3d)
 		tz=cz
 		do
 			
-			if(shellalignment)
-				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-1.5)^2 ? 1 : ammat
+			if(shellalignment>0)
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2 ? 1 : ammat
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ammat[p][q][r]==0 && ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2) ? tvec[t] : vecmat
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ammat[p][q][r]==1 ? 0 : vecmat
+			elseif(shellalignment<0) // only the core is aligned
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2) ? tvec[t] : vecmat
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2  ) && ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-shellwidth)^2 )  ? 1 : ammat
 			else
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
-				//ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]   = (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius)^2 ? 1 : ammat
 			endif
-			// for micelles change the above line, (right now it's just making the dipole alignment in line with the fibril main axis)
-			// radial, and two materials
-			// need to add another material outer core, and add to exmat, probably with a core shell diameter parameters needed
 			
 			exmat[max(tx-radius-maxsize,0),min(tx+radius+maxsize,mx)][max(ty-radius-maxsize,0),min(ty+radius+maxsize,my)][max(tz-radius-maxsize,0),min(tz+radius+maxsize,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius+t)^2 ? 0 : exmat
 			tx += vec[0]
@@ -2961,13 +2964,15 @@ function model3D_fibrils(s3d)
 		tz=cz
 		length-=1
 		do
-			if(shellalignment)
-				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-1.5)^2 ? 1 : ammat
+			if(shellalignment>0)
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2 ? 1 : ammat
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ammat[p][q][r]==0 && ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2 ) ? tvec[t] : vecmat
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ammat[p][q][r]==1 ? 0 : vecmat
+			elseif(shellalignment<0) // only the core is aligned
+				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2) ? tvec[t] : vecmat
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2  ) && ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-shellwidth)^2 )  ? 1 : ammat
 			else
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
-				//ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]   = (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius)^2 ? 1 : ammat
 			endif
 			
 			exmat[max(tx-radius-maxsize,0),min(tx+radius+maxsize,mx)][max(ty-radius-maxsize,0),min(ty+radius+maxsize,my)][max(tz-radius-maxsize,0),min(tz+radius+maxsize,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius+t)^2 ? 0 : exmat
