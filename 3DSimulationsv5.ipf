@@ -371,27 +371,27 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		/// this next chunk is the depricated vector morphology representation.  This is now replaced with angular representation
 		HDF5CreateGroup h5file , "vector_morphology" , groupID
 		newdatafolder /o/s hd5output
-		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][2-t] // switching dimension order for CyRSoXS beta 2
 		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_alignment, groupiD
 		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_unaligned = s3d.m1[p][q][r][3]
 		hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_1_unaligned, groupiD
 		if(waveexists(s3d.m2))
-			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][t]
+			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][2-t]
 			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2)) /d Mat_2_unaligned = s3d.m2[p][q][r][3]
 			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_alignment, groupiD
 			hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_2_unaligned, groupiD
 			if(waveexists(s3d.m3))
-				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][t]
+				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][2-t]
 				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2)) /d Mat_3_unaligned = s3d.m3[p][q][r][3]
 				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_3_alignment, groupiD
 				hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_3_unaligned, groupiD
 				if(waveexists(s3d.m4))
-					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][t]
+					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][2-t]
 					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2)) /d Mat_4_unaligned = s3d.m4[p][q][r][3]
 					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_4_alignment, groupiD
 					hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_4_unaligned, groupiD
 					if(waveexists(s3d.m5))
-						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][t]
+						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][2-t]
 						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2)) /d Mat_5_unaligned = s3d.m5[p][q][r][3]
 						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_5_alignment, groupiD
 						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64} /MAXD={256,2048,2048} Mat_5_unaligned, groupiD
@@ -3727,7 +3727,7 @@ function tempalignmap(xalign, yalign,zalign,alignmag,slicez,update)
 	arrowsyay[][0] = arrowsyay[p][1]*0!=0 ? nan : arrowsyay[p][0]
 	if(!update)
 		dowindow /k alignmentmap
-		Display /k=1/n=alignmentmap/W=(-1861,-486,-457,918)/K=1  yloc vs xloc as "Slice of Alignment"
+		Display /k=1/n=alignmentmap/W=(124,89,870,835)/K=1  yloc vs xloc as "Slice of Alignment"
 		ModifyGraph/w=alignmentmap mode=3,gfSize=12
 		ModifyGraph/w=alignmentmap rgb=(0,0,0)
 		ModifyGraph/w=alignmentmap msize=0.5,marker=42,tlOffset=-5
@@ -5324,16 +5324,9 @@ function writeconfig(s3d,configfolder, starten,enden,incen)
 	
 	open /p=cyrsoxspath tempref as "run.sh"
 	fprintf tempref, "#!/bin/bash\n"
-	string twod = ""
-	string matn = ""
 	
-	if(s3d.thickness>1)
-		twod = "3d"
-	else
-		twod = "2d"
-	endif
 	string name = parsefilepath(0,configfolder,":",1,0)
-	fprintf tempref, "/opt/cy-rsoxs/Cy-RSoXS-%dm-%s %s.hd5" , s3d.materialnum, twod, name
+	fprintf tempref, "/opt/cy-rsoxs/N%d/Double/CyRSoXS %s.hd5" , s3d.materialnum, name
 	
 	
 	close /A
