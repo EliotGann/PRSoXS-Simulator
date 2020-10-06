@@ -4565,7 +4565,7 @@ function doalignmentmap(folder,[addtolayout])
 	
 	string alignmapname = cleanupname((folder + "_map"),0)
 	dowindow /k $alignmapname
-	Display /k=1/n=$alignmapname/W=(-1861,-486,-457,918) /l /b  yloc vs xloc as "Slice of Alignment"
+	Display /k=1/n=$alignmapname/W=(14,85,754,825) /l /b  yloc vs xloc as "Slice of Alignment"
 	appendtograph /w=$alignmapname /l /b  yloc2 vs xloc
 	AppendImage/w=$alignmapname /l/b slice
 	//if(rev)
@@ -4574,7 +4574,7 @@ function doalignmentmap(folder,[addtolayout])
 	//	ModifyImage/w=alignmentmap slice ctab= {0,1,yellowhot,0}
 	//endif
 	ModifyGraph/w=$alignmapname mode=3,gfSize=12
-	ModifyGraph/w=$alignmapname rgb(yloc2)=(65535,32768,32768),rgb(yloc)=(16385,65535,65535)
+	ModifyGraph/w=$alignmapname rgb(yloc2)=(65535,32768,32768,30000),rgb(yloc)=(16385,65535,65535,6554)
 	ModifyGraph/w=$alignmapname msize=0.5,marker=42,tlOffset=-5
 	ModifyGraph/w=$alignmapname mrkThick=0.1,margin(left)=26,margin(bottom)=26
 	ModifyGraph/w=$alignmapname arrowMarker(yloc)={arrowsyay,.75,0,0,1}
@@ -6491,4 +6491,23 @@ function make2dlattice(magnitude,coordx, coordy, unitv1x, unitv1y, unitv2x, unit
 	sort mag,mag, coordx,coordy
 	wavestats /q mag
 	redimension /n=(v_npnts) mag, coordx, coordy
+end
+
+
+function rundirs()
+	newpath /M="Path of simulation results"/O/Q/Z simulationpath
+	if(v_flag)
+		print "bad path entered, stopping"
+		return 0
+	endif
+	pathinfo simulationpath
+	string pathbase = s_path
+	string directory, dirs = indexedDir(simulationpath,-1,1)
+	variable j
+	for(j=0;j<itemsinlist(dirs);j++)
+		directory = stringfromlist(j,dirs)
+		Analyze_HDF5_dir(pathbase = directory)
+	
+	endfor
+
 end
