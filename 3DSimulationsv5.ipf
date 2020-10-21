@@ -4540,7 +4540,7 @@ function doalignmentmap(folder,[addtolayout])
 		slice += density2[5][p][q]
 	endif
 	if(waveexists(density3))
-		slice += density1[5][p][q]
+		slice += density3[5][p][q]
 	endif
 	setscale /i x, 0,dimsize(m,1)*5,slice
 	setscale /i y, 0,dimsize(m,1)*5,slice
@@ -4569,7 +4569,7 @@ function doalignmentmap(folder,[addtolayout])
 	appendtograph /w=$alignmapname /l /b  yloc2 vs xloc
 	AppendImage/w=$alignmapname /l/b slice
 	//if(rev)
-		ModifyImage/w=$alignmapname slice ctab= {1,0,grays,0}
+		ModifyImage/w=$alignmapname slice ctab= {1.2,0,grays,0}
 	//else
 	//	ModifyImage/w=alignmentmap slice ctab= {0,1,yellowhot,0}
 	//endif
