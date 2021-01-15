@@ -1156,8 +1156,8 @@ function model3D_Spheres2(s3d)
 	variable pd = 				str2num(stringfromlist( 3 ,s3d.paramstring,","))
 	variable thickness = 		s3d.thickness
 	variable noise = 			str2num(stringfromlist( 4 ,s3d.paramstring,","))
-	variable minrad = 			ceil(str2num(stringfromlist( 4 ,s3d.paramstring,",")))
-	variable maxrad = 			floor(str2num(stringfromlist( 4 ,s3d.paramstring,",")))
+	variable minrad = 			ceil(str2num(stringfromlist( 5 ,s3d.paramstring,",")))
+	variable maxrad = 			floor(str2num(stringfromlist( 6 ,s3d.paramstring,",")))
 	
 
 	
