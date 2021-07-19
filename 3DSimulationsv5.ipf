@@ -3035,6 +3035,8 @@ function model3D_fibrils(s3d)
 	s3d.m2[][][][3] = (1-rhomatrix) * (1-mat[p][q][r])
 	
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
+	duplicate /o mat,s3d.density2 // this returns the density matrix of material 2 (the matrix) for alignment etc later on
+	s3d.density2  = 1 - s3d.density1
 end
 
 function /s variables_lamella()
