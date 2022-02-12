@@ -2946,6 +2946,8 @@ function model3D_fibrils(s3d)
 			elseif(shellalignment<0) // only the core is aligned
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2) ? tvec[t] : vecmat
 				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2  ) && ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-shellwidth)^2 )  ? 1 : ammat
+				// error here where both amorphous and aligned material is in the core region... need to erase unaligned shell ammat where aligned core is non negative
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 > 0 ? 0 : ammat
 			else
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
 			endif
@@ -2971,6 +2973,8 @@ function model3D_fibrils(s3d)
 			elseif(shellalignment<0) // only the core is aligned
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2) ? tvec[t] : vecmat
 				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2  ) && ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-shellwidth)^2 )  ? 1 : ammat
+				// error here where both amorphous and aligned material is in the core region... need to erase unaligned shell ammat where aligned core is non negative
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 > 0 ? 0 : ammat
 			else
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
 			endif
@@ -3020,6 +3024,9 @@ function model3D_fibrils(s3d)
 		vecmat[][][][2] = mat[p][q][r]
 	endif
 	mat = vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r]
+	vecmat = mat[p][q][r]>1 ? vecmat[p][q][r][t] / mat[p][q][r] : vecmat
+	ammat = mat[p][q][r]>1 ? ammat[p][q][r]/mat[p][q][r] : ammat
+	mat = vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r]
 	
 	setdatafolder ::
 	variable fibrilvol = mean(mat)
@@ -3031,7 +3038,7 @@ function model3D_fibrils(s3d)
 	make /n=(thickness,s3d.num,s3d.num,4) /o m1=0, m2=0
 	wave s3d.m1=m1, s3d.m2=m2
 	s3d.m1[][][][0,2] = vecmat[p][q][r][t]
-	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]) + ammat[p][q][r]
+	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]) + ammat[p][q][r]// noticed an error where mat can be more than 1, need normalizing before this step
 	s3d.m2[][][][3] = (1-rhomatrix) * (1-mat[p][q][r])
 	
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
