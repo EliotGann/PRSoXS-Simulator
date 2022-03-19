@@ -3,7 +3,6 @@
 #include "opticalconstantsDB"
 #include <ImageSlider>
 #include <3DWaveDisplay>
-#include "cyrsoxs_1D_analysis"
 structure ThreeDSystem
 // parameter inputs
 	variable rot // boolean saying if we are rotating the system or not (90 degrees is always included) 
@@ -372,27 +371,27 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		/// this next chunk is the depricated vector morphology representation.  This is now replaced with angular representation
 		HDF5CreateGroup h5file , "vector_morphology" , groupID
 		newdatafolder /o/s hd5output
-		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][2-t] // switching dimension order for CyRSoXS beta 2
 		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_alignment, groupiD
 		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_unaligned = s3d.m1[p][q][r][3]
 		hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_1_unaligned, groupiD
 		if(waveexists(s3d.m2))
-			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][t]
+			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][2-t]
 			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2)) /d Mat_2_unaligned = s3d.m2[p][q][r][3]
 			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_alignment, groupiD
 			hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_2_unaligned, groupiD
 			if(waveexists(s3d.m3))
-				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][t]
+				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][2-t]
 				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2)) /d Mat_3_unaligned = s3d.m3[p][q][r][3]
 				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_3_alignment, groupiD
 				hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_3_unaligned, groupiD
 				if(waveexists(s3d.m4))
-					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][t]
+					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][2-t]
 					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2)) /d Mat_4_unaligned = s3d.m4[p][q][r][3]
 					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_4_alignment, groupiD
 					hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_4_unaligned, groupiD
 					if(waveexists(s3d.m5))
-						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][t]
+						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][2-t]
 						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2)) /d Mat_5_unaligned = s3d.m5[p][q][r][3]
 						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_5_alignment, groupiD
 						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64} /MAXD={256,2048,2048} Mat_5_unaligned, groupiD
@@ -1157,8 +1156,8 @@ function model3D_Spheres2(s3d)
 	variable pd = 				str2num(stringfromlist( 3 ,s3d.paramstring,","))
 	variable thickness = 		s3d.thickness
 	variable noise = 			str2num(stringfromlist( 4 ,s3d.paramstring,","))
-	variable minrad = 			ceil(str2num(stringfromlist( 4 ,s3d.paramstring,",")))
-	variable maxrad = 			floor(str2num(stringfromlist( 4 ,s3d.paramstring,",")))
+	variable minrad = 			ceil(str2num(stringfromlist( 5 ,s3d.paramstring,",")))
+	variable maxrad = 			floor(str2num(stringfromlist( 6 ,s3d.paramstring,",")))
 	
 
 	
@@ -2007,7 +2006,6 @@ function Model3DPanel()
 	Button Analyze_Sim,pos={149,481},size={96,22},proc=Analyze_sim_but,title="\\Z20Analyze"
 	Button Analyze_HDF_new,pos={95,90},size={300,25},disable=1,proc=Analyze_HDF_but_new,title="\\Z14Analyze CyRSoXS HDFs (>= v1.0)"
 	Button Analyze_HDF,pos={150,150},size={190,25},disable=1,proc=Analyze_HDF_but,title="\\Z09Analyze CyRSoXS HDFs (old format - pre v1.0)"
-
 	setdatafolder foldersave
 End
 function /s time2str2(secs)
@@ -2951,6 +2949,8 @@ function model3D_fibrils(s3d)
 			elseif(shellalignment<0) // only the core is aligned
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2) ? tvec[t] : vecmat
 				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2  ) && ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-shellwidth)^2 )  ? 1 : ammat
+				// error here where both amorphous and aligned material is in the core region... need to erase unaligned shell ammat where aligned core is non negative
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 > 0 ? 0 : ammat
 			else
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
 			endif
@@ -2976,6 +2976,8 @@ function model3D_fibrils(s3d)
 			elseif(shellalignment<0) // only the core is aligned
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2) ? tvec[t] : vecmat
 				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2  ) && ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-shellwidth)^2 )  ? 1 : ammat
+				// error here where both amorphous and aligned material is in the core region... need to erase unaligned shell ammat where aligned core is non negative
+				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 > 0 ? 0 : ammat
 			else
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
 			endif
@@ -3025,6 +3027,9 @@ function model3D_fibrils(s3d)
 		vecmat[][][][2] = mat[p][q][r]
 	endif
 	mat = vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r]
+	vecmat = mat[p][q][r]>1 ? vecmat[p][q][r][t] / mat[p][q][r] : vecmat
+	ammat = mat[p][q][r]>1 ? ammat[p][q][r]/mat[p][q][r] : ammat
+	mat = vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r]
 	
 	setdatafolder ::
 	variable fibrilvol = mean(mat)
@@ -3036,10 +3041,12 @@ function model3D_fibrils(s3d)
 	make /n=(thickness,s3d.num,s3d.num,4) /o m1=0, m2=0
 	wave s3d.m1=m1, s3d.m2=m2
 	s3d.m1[][][][0,2] = vecmat[p][q][r][t]
-	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]) + ammat[p][q][r]
+	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]) + ammat[p][q][r]// noticed an error where mat can be more than 1, need normalizing before this step
 	s3d.m2[][][][3] = (1-rhomatrix) * (1-mat[p][q][r])
 	
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
+	duplicate /o mat,s3d.density2 // this returns the density matrix of material 2 (the matrix) for alignment etc later on
+	s3d.density2  = 1 - s3d.density1
 end
 
 function /s variables_lamella()
@@ -3732,7 +3739,7 @@ function tempalignmap(xalign, yalign,zalign,alignmag,slicez,update)
 	arrowsyay[][0] = arrowsyay[p][1]*0!=0 ? nan : arrowsyay[p][0]
 	if(!update)
 		dowindow /k alignmentmap
-		Display /k=1/n=alignmentmap/W=(-1861,-486,-457,918)/K=1  yloc vs xloc as "Slice of Alignment"
+		Display /k=1/n=alignmentmap/W=(124,89,870,835)/K=1  yloc vs xloc as "Slice of Alignment"
 		ModifyGraph/w=alignmentmap mode=3,gfSize=12
 		ModifyGraph/w=alignmentmap rgb=(0,0,0)
 		ModifyGraph/w=alignmentmap msize=0.5,marker=42,tlOffset=-5
@@ -4545,7 +4552,7 @@ function doalignmentmap(folder,[addtolayout])
 		slice += density2[5][p][q]
 	endif
 	if(waveexists(density3))
-		slice += density1[5][p][q]
+		slice += density3[5][p][q]
 	endif
 	setscale /i x, 0,dimsize(m,1)*5,slice
 	setscale /i y, 0,dimsize(m,1)*5,slice
@@ -4570,16 +4577,16 @@ function doalignmentmap(folder,[addtolayout])
 	
 	string alignmapname = cleanupname((folder + "_map"),0)
 	dowindow /k $alignmapname
-	Display /k=1/n=$alignmapname/W=(-1861,-486,-457,918) /l /b  yloc vs xloc as "Slice of Alignment"
+	Display /k=1/n=$alignmapname/W=(14,85,754,825) /l /b  yloc vs xloc as "Slice of Alignment"
 	appendtograph /w=$alignmapname /l /b  yloc2 vs xloc
 	AppendImage/w=$alignmapname /l/b slice
 	//if(rev)
-		ModifyImage/w=$alignmapname slice ctab= {1,0,grays,0}
+		ModifyImage/w=$alignmapname slice ctab= {1.2,0,grays,0}
 	//else
 	//	ModifyImage/w=alignmentmap slice ctab= {0,1,yellowhot,0}
 	//endif
 	ModifyGraph/w=$alignmapname mode=3,gfSize=12
-	ModifyGraph/w=$alignmapname rgb(yloc2)=(65535,32768,32768),rgb(yloc)=(16385,65535,65535)
+	ModifyGraph/w=$alignmapname rgb(yloc2)=(65535,32768,32768,30000),rgb(yloc)=(16385,65535,65535,6554)
 	ModifyGraph/w=$alignmapname msize=0.5,marker=42,tlOffset=-5
 	ModifyGraph/w=$alignmapname mrkThick=0.1,margin(left)=26,margin(bottom)=26
 	ModifyGraph/w=$alignmapname arrowMarker(yloc)={arrowsyay,.75,0,0,1}
@@ -5329,16 +5336,9 @@ function writeconfig(s3d,configfolder, starten,enden,incen)
 	
 	open /p=cyrsoxspath tempref as "run.sh"
 	fprintf tempref, "#!/bin/bash\n"
-	string twod = ""
-	string matn = ""
 	
-	if(s3d.thickness>1)
-		twod = "3d"
-	else
-		twod = "2d"
-	endif
 	string name = parsefilepath(0,configfolder,":",1,0)
-	fprintf tempref, "/opt/cy-rsoxs/Cy-RSoXS-%dm-%s %s.hd5" , s3d.materialnum, twod, name
+	fprintf tempref, "/opt/cy-rsoxs/N%d/Double/CyRSoXS %s.hd5" , s3d.materialnum, name
 	
 	
 	close /A
