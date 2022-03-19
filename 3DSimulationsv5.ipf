@@ -3,6 +3,7 @@
 #include "opticalconstantsDB"
 #include <ImageSlider>
 #include <3DWaveDisplay>
+#include "cyrsoxs_1D_analysis"
 structure ThreeDSystem
 // parameter inputs
 	variable rot // boolean saying if we are rotating the system or not (90 degrees is always included) 
@@ -371,27 +372,27 @@ function model3D(modelname,voxelsize,sizescale,resolution,thickness,paramstring,
 		/// this next chunk is the depricated vector morphology representation.  This is now replaced with angular representation
 		HDF5CreateGroup h5file , "vector_morphology" , groupID
 		newdatafolder /o/s hd5output
-		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][2-t] // switching dimension order for CyRSoXS beta 2
+		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2),3) /d Mat_1_alignment = s3d.m1[p][q][r][t]
 		hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_1_alignment, groupiD
 		make /o /n=(dimsize(s3d.m1,0),dimsize(s3d.m1,1),dimsize(s3d.m1,2)) /d Mat_1_unaligned = s3d.m1[p][q][r][3]
 		hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_1_unaligned, groupiD
 		if(waveexists(s3d.m2))
-			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][2-t]
+			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2),3) /d Mat_2_alignment = s3d.m2[p][q][r][t]
 			make /o /n=(dimsize(s3d.m2,0),dimsize(s3d.m2,1),dimsize(s3d.m2,2)) /d Mat_2_unaligned = s3d.m2[p][q][r][3]
 			hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_2_alignment, groupiD
 			hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_2_unaligned, groupiD
 			if(waveexists(s3d.m3))
-				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][2-t]
+				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2),3) /d Mat_3_alignment = s3d.m3[p][q][r][t]
 				make /o /n=(dimsize(s3d.m3,0),dimsize(s3d.m3,1),dimsize(s3d.m3,2)) /d Mat_3_unaligned = s3d.m3[p][q][r][3]
 				hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_3_alignment, groupiD
 				hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_3_unaligned, groupiD
 				if(waveexists(s3d.m4))
-					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][2-t]
+					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2),3) /d Mat_4_alignment = s3d.m4[p][q][r][t]
 					make /o /n=(dimsize(s3d.m4,0),dimsize(s3d.m4,1),dimsize(s3d.m4,2)) /d Mat_4_unaligned = s3d.m4[p][q][r][3]
 					hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_4_alignment, groupiD
 					hdf5saveData /GZIP = {9,1} /LAYO={2,64,64,64} /MAXD={256,2048,2048} Mat_4_unaligned, groupiD
 					if(waveexists(s3d.m5))
-						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][2-t]
+						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2),3) /d Mat_5_alignment = s3d.m5[p][q][r][t]
 						make /o /n=(dimsize(s3d.m5,0),dimsize(s3d.m5,1),dimsize(s3d.m5,2)) /d Mat_5_unaligned = s3d.m5[p][q][r][3]
 						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64,1} /MAXD={256,2048,2048,3} Mat_5_alignment, groupiD
 						hdf5saveData /GZIP = {9,1} /LAYO={2,1,64,64} /MAXD={256,2048,2048} Mat_5_unaligned, groupiD
@@ -1156,8 +1157,8 @@ function model3D_Spheres2(s3d)
 	variable pd = 				str2num(stringfromlist( 3 ,s3d.paramstring,","))
 	variable thickness = 		s3d.thickness
 	variable noise = 			str2num(stringfromlist( 4 ,s3d.paramstring,","))
-	variable minrad = 			ceil(str2num(stringfromlist( 5 ,s3d.paramstring,",")))
-	variable maxrad = 			floor(str2num(stringfromlist( 6 ,s3d.paramstring,",")))
+	variable minrad = 			ceil(str2num(stringfromlist( 4 ,s3d.paramstring,",")))
+	variable maxrad = 			floor(str2num(stringfromlist( 4 ,s3d.paramstring,",")))
 	
 
 	
@@ -1870,6 +1871,8 @@ Function Model3DTabProc(tca) : TabControl
 			CheckBox SaveAnisotropy,disable= (tab!=2)
 			CheckBox outputCYRSOXSchk,disable= (tab!=2)
 			CheckBox nosimchk,disable= (tab!=2)
+			Button Analyze_HDF_new,disable= (tab!=3)
+			Button Analyze_HDF,disable= (tab!=3)
 			svar controllist = root:Packages:ScatterSim3D:controllist
 			variable i
 			string controlname, controltype
@@ -1962,7 +1965,7 @@ function Model3DPanel()
 	GroupBox MorphOptions,pos={20,87},size={431,314},title="Variables for Morphology"
 	Button RemoveMaterial,pos={40,216},size={134,39},disable=1,proc=RemoveMaterialButton,title="Remove Material"
 	TabControl tab0,pos={8,7},size={458,443},proc=Model3dTabProc,tabLabel(0)="Morphology"
-	TabControl tab0,tabLabel(1)="Materials",tabLabel(2)="Scattering",value= 0
+	TabControl tab0,tabLabel(1)="Materials",tabLabel(2)="Scattering",tabLabel(3)="CyRSoXS",value= 0
 	GroupBox MaterialsListText,pos={206,37},size={249,206},disable=1,title="List of Materials"
 	SetVariable SetRes,pos={20,31},size={275,16},title="Resolution (Film Width and Length) [Voxels]"
 	SetVariable SetRes,limits={10,5000,1},value= root:Packages:ScatterSim3D:resolution,live= 1
@@ -2002,7 +2005,9 @@ function Model3DPanel()
 	CheckBox NoSimchk,pos={118.00,173.00},size={246.00,16.00},title="Skip the simulation.  Just create morphology"
 	CheckBox NoSimchk,variable=skipsim,disable=1
 	Button Analyze_Sim,pos={149,481},size={96,22},proc=Analyze_sim_but,title="\\Z20Analyze"
-	Button Analyze_HDF,pos={9,481},size={132,22},proc=Analyze_HDF_but,title="\\Z20Analyze HDFs"
+	Button Analyze_HDF_new,pos={95,90},size={300,25},disable=1,proc=Analyze_HDF_but_new,title="\\Z14Analyze CyRSoXS HDFs (>= v1.0)"
+	Button Analyze_HDF,pos={150,150},size={190,25},disable=1,proc=Analyze_HDF_but,title="\\Z09Analyze CyRSoXS HDFs (old format - pre v1.0)"
+
 	setdatafolder foldersave
 End
 function /s time2str2(secs)
@@ -2946,8 +2951,6 @@ function model3D_fibrils(s3d)
 			elseif(shellalignment<0) // only the core is aligned
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2) ? tvec[t] : vecmat
 				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2  ) && ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-shellwidth)^2 )  ? 1 : ammat
-				// error here where both amorphous and aligned material is in the core region... need to erase unaligned shell ammat where aligned core is non negative
-				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 > 0 ? 0 : ammat
 			else
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
 			endif
@@ -2973,8 +2976,6 @@ function model3D_fibrils(s3d)
 			elseif(shellalignment<0) // only the core is aligned
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= ((p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius-shellwidth)^2) ? tvec[t] : vecmat
 				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 <= (radius)^2  ) && ( (p-tx)^2 + (q-ty)^2 + (r-tz)^2 > (radius-shellwidth)^2 )  ? 1 : ammat
-				// error here where both amorphous and aligned material is in the core region... need to erase unaligned shell ammat where aligned core is non negative
-				ammat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)]= vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 > 0 ? 0 : ammat
 			else
 				vecmat[max(tx-radius,0),min(tx+radius,mx)][max(ty-radius,0),min(ty+radius,my)][max(tz-radius,0),min(tz+radius,mz)][]= (p-tx)^2 + (q-ty)^2 + (r-tz)^2 < (radius)^2 ? tvec[t] : vecmat
 			endif
@@ -3024,9 +3025,6 @@ function model3D_fibrils(s3d)
 		vecmat[][][][2] = mat[p][q][r]
 	endif
 	mat = vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r]
-	vecmat = mat[p][q][r]>1 ? vecmat[p][q][r][t] / mat[p][q][r] : vecmat
-	ammat = mat[p][q][r]>1 ? ammat[p][q][r]/mat[p][q][r] : ammat
-	mat = vecmat[p][q][r][0]^2 + vecmat[p][q][r][1]^2 + vecmat[p][q][r][2]^2 + ammat[p][q][r]
 	
 	setdatafolder ::
 	variable fibrilvol = mean(mat)
@@ -3038,12 +3036,10 @@ function model3D_fibrils(s3d)
 	make /n=(thickness,s3d.num,s3d.num,4) /o m1=0, m2=0
 	wave s3d.m1=m1, s3d.m2=m2
 	s3d.m1[][][][0,2] = vecmat[p][q][r][t]
-	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]) + ammat[p][q][r]// noticed an error where mat can be more than 1, need normalizing before this step
+	s3d.m1[][][][3] = rhomatrix * (1-mat[p][q][r]) + ammat[p][q][r]
 	s3d.m2[][][][3] = (1-rhomatrix) * (1-mat[p][q][r])
 	
 	duplicate /o mat,s3d.density1 // this returns the density matrix of material 1 (the matrix) for alignment etc later on
-	duplicate /o mat,s3d.density2 // this returns the density matrix of material 2 (the matrix) for alignment etc later on
-	s3d.density2  = 1 - s3d.density1
 end
 
 function /s variables_lamella()
@@ -3736,7 +3732,7 @@ function tempalignmap(xalign, yalign,zalign,alignmag,slicez,update)
 	arrowsyay[][0] = arrowsyay[p][1]*0!=0 ? nan : arrowsyay[p][0]
 	if(!update)
 		dowindow /k alignmentmap
-		Display /k=1/n=alignmentmap/W=(124,89,870,835)/K=1  yloc vs xloc as "Slice of Alignment"
+		Display /k=1/n=alignmentmap/W=(-1861,-486,-457,918)/K=1  yloc vs xloc as "Slice of Alignment"
 		ModifyGraph/w=alignmentmap mode=3,gfSize=12
 		ModifyGraph/w=alignmentmap rgb=(0,0,0)
 		ModifyGraph/w=alignmentmap msize=0.5,marker=42,tlOffset=-5
@@ -4549,7 +4545,7 @@ function doalignmentmap(folder,[addtolayout])
 		slice += density2[5][p][q]
 	endif
 	if(waveexists(density3))
-		slice += density3[5][p][q]
+		slice += density1[5][p][q]
 	endif
 	setscale /i x, 0,dimsize(m,1)*5,slice
 	setscale /i y, 0,dimsize(m,1)*5,slice
@@ -4574,16 +4570,16 @@ function doalignmentmap(folder,[addtolayout])
 	
 	string alignmapname = cleanupname((folder + "_map"),0)
 	dowindow /k $alignmapname
-	Display /k=1/n=$alignmapname/W=(14,85,754,825) /l /b  yloc vs xloc as "Slice of Alignment"
+	Display /k=1/n=$alignmapname/W=(-1861,-486,-457,918) /l /b  yloc vs xloc as "Slice of Alignment"
 	appendtograph /w=$alignmapname /l /b  yloc2 vs xloc
 	AppendImage/w=$alignmapname /l/b slice
 	//if(rev)
-		ModifyImage/w=$alignmapname slice ctab= {1.2,0,grays,0}
+		ModifyImage/w=$alignmapname slice ctab= {1,0,grays,0}
 	//else
 	//	ModifyImage/w=alignmentmap slice ctab= {0,1,yellowhot,0}
 	//endif
 	ModifyGraph/w=$alignmapname mode=3,gfSize=12
-	ModifyGraph/w=$alignmapname rgb(yloc2)=(65535,32768,32768,30000),rgb(yloc)=(16385,65535,65535,6554)
+	ModifyGraph/w=$alignmapname rgb(yloc2)=(65535,32768,32768),rgb(yloc)=(16385,65535,65535)
 	ModifyGraph/w=$alignmapname msize=0.5,marker=42,tlOffset=-5
 	ModifyGraph/w=$alignmapname mrkThick=0.1,margin(left)=26,margin(bottom)=26
 	ModifyGraph/w=$alignmapname arrowMarker(yloc)={arrowsyay,.75,0,0,1}
@@ -5333,9 +5329,16 @@ function writeconfig(s3d,configfolder, starten,enden,incen)
 	
 	open /p=cyrsoxspath tempref as "run.sh"
 	fprintf tempref, "#!/bin/bash\n"
+	string twod = ""
+	string matn = ""
 	
+	if(s3d.thickness>1)
+		twod = "3d"
+	else
+		twod = "2d"
+	endif
 	string name = parsefilepath(0,configfolder,":",1,0)
-	fprintf tempref, "/opt/cy-rsoxs/N%d/Double/CyRSoXS %s.hd5" , s3d.materialnum, name
+	fprintf tempref, "/opt/cy-rsoxs/Cy-RSoXS-%dm-%s %s.hd5" , s3d.materialnum, twod, name
 	
 	
 	close /A
@@ -5843,6 +5846,142 @@ function /wave Analyze_HDF5_dir([pathbase])
 	setdatafolder foldersave
 end
 
+//*************************************************************************************************************
+function /wave Analyze_HDF5_dir_new([pathbase])
+//function to load CyRSoXS output produced by v1.0+. Supports both vector and euler morphology
+//reads both cyrsoxs output h5 files as well as morphology hdf5
+//first the procedure prompts for the h5 scattering datafiles
+//second prompt is for the morpohlogy hdf5 file
+	string pathbase
+	STRUCT HDF5DataInfo di	// Defined in HDF5 Browser.ipf.
+	InitHDF5DataInfo(di)	// Initialize structure.
+	if(paramisdefault(pathbase))
+		newpath /M="Path for simulation results"/O/Q/Z simulationpath
+		if(v_flag)
+			print "bad path entered, stopping"
+		endif
+		pathinfo simulationpath
+		pathbase = s_path
+	endif
+	if(!stringmatch(parseFilePath(0,pathbase,":",1,0),"HDF5"))
+		pathbase = removeending(pathbase,":")+":HDF5:"
+	endif
+	newpath /M="Path for simulation results"/O/Q/Z simulationpath , pathbase
+	pathinfo simulationpath
+	string simname = parsefilepath(0,s_path,":",1,1)
+
+	string hdffilenamelist = sortlist(indexedfile(simulationpath, -1, ".h5"))
+	variable numfiles = itemsinlist(HDFfilenamelist)
+
+	string foldersave = getdataFolder(1)
+	setdatafolder root:
+	newdatafolder /o/s Packages
+	newdatafolder /o/s HDFdata
+	svar /z listofendef, colortabdef
+	nvar /z offsetstepdef
+	newdatafolder /o/s $simname
+	DFREF saveDFR = GetDataFolderDFR()
+	
+	///extract qnum and physsize params from morphology hdf5 file 
+	variable fileID
+	HDF5OpenFile /I/Z/R fileID as ""
+	if (V_flag == 0)
+		HDF5LoadGroup /O/R/N=hdf5_params :, fileID, "/igor_parameters"
+		wave/Z igornum, igorvoxelsize
+		variable /G physsize = igorvoxelsize[0]
+		variable /G qnum = igornum[0]
+		if (V_flag != 0)
+		//if igor_parameters group is missing LoadGroup won't be successful 
+		//in that case load config.txt check morphology type
+		//extract simulation size from dimension of dataset 
+		//get PhysSize from Morphology_Parameters
+			string teststring
+			variable hdf5_type
+			grep /q/list/p=simulationpath/E={"MorphologyType",0} "::config.txt"
+			splitstring /E="MorphologyType\s*=\s*([^;]*)" S_value, teststring
+			hdf5_type = str2num(teststring)
+			if (hdf5_type == 0)
+				print "Euler Morphology"
+				HDF5DatasetInfo(fileID, "/Euler_Angles/Mat_1_Vfrac", 0, di)
+			elseif (hdf5_type == 1)
+				print "Vector Morphology"
+				HDF5DatasetInfo(fileID, "/Vector_Morphology/Mat_1_alignment", 0, di)
+			endif
+			variable /G qnum = di.dims[1]
+			HDF5LoadData /O/N=Phys_Size/Z fileID, "/Morphology_Parameters/PhysSize"
+			wave /Z Phys_Size
+			variable /G physsize = Phys_Size[0]
+		endif
+	endif
+	HDF5CloseFile fileID
+	
+	make /o/n=(qnum, qnum, numfiles) /s scatter3DSave
+	make /o/n=(numfiles) Envalues
+	setscale /p x,-pi/physsize ,2*pi/(physsize*qnum), scatter3DSave
+	setscale /p y,-pi/physsize ,2*pi/(physsize*qnum), scatter3DSave
+	variable j, hdfref
+	string filename,enstr
+	if(svar_Exists(listofendef))
+		string /g listofen
+		listofen = listofendef
+	endif
+	if(svar_Exists(colortabdef))
+		string /g colortab
+		colortab = colortabdef
+	endif
+	if(nvar_Exists(offsetstepdef))
+		variable /g offsetstep
+		offsetstep = offsetstepdef
+	endif
+		
+	make/d/o/n=(floor(qnum/(sqrt(2))),numfiles) int3DvsEnhdf=0,ratio3DvsEnhdf=0, para3dvsenhdf, perp3dvsenhdf
+
+	setscale /i x, 0,pi/physsize, int3DvsEnhdf,ratio3DvsEnhdf, para3dvsenhdf, perp3dvsenhdf
+	setscale /i y, wavemin(envalues), wavemax(envalues), int3DvsEnhdf,ratio3DvsEnhdf, para3dvsenhdf, perp3dvsenhdf
+	
+	variable ey =0
+	variable ez =1
+	variable pe = atan(ey/ez)*180/pi
+	variable pa = atan(-ez/ey)*180/pi
+	
+	for(j=0;j<numfiles;j++)
+		filename = stringfromlist(j,hdffilenamelist)
+		HDF5OpenFile /p=simulationpath /R hdfref as filename
+		HDF5Loaddata/o/q/n=loadeddata hdfref, "/K0/projection"
+		HDF5CloseFile hdfref
+		wave loadeddata
+		scatter3DSave[][][j] = loadeddata[p][q]
+		setscale /p y,-pi/physsize ,2*pi/(physsize*qnum), loadeddata
+		setscale /p x,-pi/physsize ,2*pi/(physsize*qnum), loadeddata
+		splitstring /e="^Energy_(.*).h5$" filename, enstr
+		Envalues[j] = str2num(enstr)
+		
+		wave int3dp0 = radialintegratehdf(loadeddata,0,90,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0")
+		wave int3dp0para = radialintegratehdf(loadeddata,pa-20,pa+20,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0para")
+		wave int3dp0perp = radialintegratehdf(loadeddata,pe-20,pe+20,0,pi/physsize,floor(qnum/sqrt(2)),"int3dp0perp")
+		multithread int3DvsEnhdf[][j] =  int3dp0[p] //* x^2
+		multithread ratio3DvsEnhdf[][j] = (int3dp0para[p] - int3dp0perp[p]) / (int3dp0para[p] + int3dp0perp[p])
+		multithread perp3Dvsenhdf[][j] =  int3dp0perp[p]
+		multithread para3Dvsenhdf[][j] = int3dp0para[p]
+	endfor
+	doratiographhdf()
+	newimage /k=1 /n=$cleanupname(simname,0) scatter3DSave
+	doupdate
+	controlbar 46
+	Button addenergy,pos={150,3},size={120,20},disable=0,proc=addenergy_but,title="Add to 1D Plot"
+	Button Removeenergy,pos={150,23},size={120,20},disable=0,proc=removeenergy_but,title="Remove from Plot"
+	Button savedef,pos={3,3},size={120,20},disable=0,proc=savehdfdef_but,title="Save as Default"
+	Button Applydef,pos={3,23},size={120,20},disable=0,proc=Applyhdfdef_but,title="Apply Default"
+	scatter3DAppend3DImageSlider(envalues)
+	
+	modifyimage scatter3DSave ctab={0.1,1000,Terrain,0},log=1
+	modifygraph height={Plan,1,left,top}
+	updateenplot(getdatafolderDFR())
+	applydefhdf(getdatafolderDFR())
+	updateenplot(getdatafolderDFR())
+	setdatafolder foldersave
+end
+//*************************************************************************************************************
 
 function /wave Analyze_dir(dfref folder)
 	dfref foldersave = getdatafolderdfr()
@@ -6297,6 +6436,21 @@ Function Analyze_HDF_but(ba) : ButtonControl
 	return 0
 End
 
+Function Analyze_HDF_but_new(ba) : ButtonControl
+	STRUCT WMButtonAction &ba
+
+	switch( ba.eventCode )
+		case 2: // mouse up
+			// click code here
+			Analyze_HDF5_dir_new()
+			break
+		case -1: // control being killed
+			break
+	endswitch
+
+	return 0
+End
+
 Function Analyze_sim_but(ba) : ButtonControl
 	STRUCT WMButtonAction &ba
 
@@ -6500,23 +6654,4 @@ function make2dlattice(magnitude,coordx, coordy, unitv1x, unitv1y, unitv2x, unit
 	sort mag,mag, coordx,coordy
 	wavestats /q mag
 	redimension /n=(v_npnts) mag, coordx, coordy
-end
-
-
-function rundirs()
-	newpath /M="Path of simulation results"/O/Q/Z simulationpath
-	if(v_flag)
-		print "bad path entered, stopping"
-		return 0
-	endif
-	pathinfo simulationpath
-	string pathbase = s_path
-	string directory, dirs = indexedDir(simulationpath,-1,1)
-	variable j
-	for(j=0;j<itemsinlist(dirs);j++)
-		directory = stringfromlist(j,dirs)
-		Analyze_HDF5_dir(pathbase = directory)
-	
-	endfor
-
 end
