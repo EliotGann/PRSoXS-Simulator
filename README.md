@@ -1,7 +1,7 @@
 # PRSoXS-Simulator
-Simulator of Polarized Sof X-ray Scattering based in Igor Pro
-developed by Eliot Gann (Eliot.gann@nis.gov)
+Simulator of Polarized Soft X-ray Scattering based in Igor Pro
+developed by Eliot Gann (eliot.gann@nist.gov)
 
-Requires Optical Constants database to function properly, and Eliot's NIKA for menu integration
+Requires Optical Constants database to function properly, and Eliot's NIKA for menu integration.
 
-For installation, simply place a shortcut or alias of the ipf file into your Igor pro "users procedures" directory.
+For installation, simply place a shortcut or alias of the Igor procedure (.ipf) file into your Igor Pro "User Procedures" directory.
