@@ -979,8 +979,8 @@ function Calculate3DScatter(s3d) // turn the polarization fields into scattering
 	multithread EscatSqr += magsqr(z * (k + x)* pxfft[p][q][r]+ y * z* pyfft[p][q][r]+ (z^2 - k^2 ) * pzfft[p][q][r])
 	make /d/n=(s3d.num,s3d.num)/o s3d.scatter3D // this will hold the final scattering result
 	wave scatter3d = s3d.scatter3d
-	setscale /i x, -pi/s3d.voxelsize, pi/s3d.voxelsize, s3d.scatter3D // changing from math units (1/voxelsize) to physics units (2pi/voxelsize)
-	setscale /i y, -pi/s3d.voxelsize, pi/s3d.voxelsize, s3d.scatter3D
+	setscale /i x, -2*pi/s3d.voxelsize, 2*pi/s3d.voxelsize, s3d.scatter3D // changing from math units (1/voxelsize) to physics units (2pi/voxelsize)
+	setscale /i y, -2*pi/s3d.voxelsize, 2*pi/s3d.voxelsize, s3d.scatter3D
 	multithread scatter3D = k^2 > x^2 + y^2 ? interp3d(EscatSqr,-k + sqrt(k^2 - x^2 -y^2),x,y) : nan // projection to the EWalds sphere
 	
 	duplicate /o s3d.EscatSqr, pxreal
@@ -5928,12 +5928,13 @@ function /wave Analyze_HDF5_dir_new([pathbase])
 			grep /q/list/p=simulationpath/E={"MorphologyType",0} "::config.txt"
 			splitstring /E="MorphologyType\s*=\s*([^;]*)" S_value, teststring
 			hdf5_type = str2num(teststring)
+			variable dummy
 			if (hdf5_type == 0)
 				print "Euler Morphology"
-				HDF5DatasetInfo(fileID, "/Euler_Angles/Mat_1_Vfrac", 0, di)
+				dummy = HDF5DatasetInfo(fileID, "/Euler_Angles/Mat_1_Vfrac", 0, di)
 			elseif (hdf5_type == 1)
 				print "Vector Morphology"
-				HDF5DatasetInfo(fileID, "/Vector_Morphology/Mat_1_alignment", 0, di)
+				dummy = HDF5DatasetInfo(fileID, "/Vector_Morphology/Mat_1_alignment", 0, di)
 			endif
 			variable /G qnum = di.dims[1]
 			HDF5LoadData /O/N=Phys_Size/Z fileID, "/Morphology_Parameters/PhysSize"
