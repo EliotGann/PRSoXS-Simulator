@@ -1,6 +1,6 @@
 # PRSoXS-Simulator
 Simulator of Polarized Soft X-ray Scattering based in Igor Pro
-developed by Eliot Gann (eliot.gann@nist.gov)
+developed by Eliot Gann (egann@bnl.gov)
 
 Requires Optical Constants database to function properly, and Eliot's NIKA for menu integration.
 
