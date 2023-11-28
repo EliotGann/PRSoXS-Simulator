@@ -1873,9 +1873,9 @@ Function Model3DTabProc(tca) : TabControl
 			Titlebox CyrsoxsNewVer, disable=(tab!=3)
 			Titlebox CyrsoxsOldVer, disable=(tab!=3)
 			Button Analyze_HDF_new,disable= (tab!=3)
-			Button Analyze_HDF,disable= (tab!=3)			
+//			Button Analyze_HDF,disable= (tab!=3)			
 			Button Analyze_HDF_batch_new,disable= (tab!=3)
-			Button Analyze_HDF_batch,disable= (tab!=3)
+//			Button Analyze_HDF_batch,disable= (tab!=3)
 			Button generate1D, disable= (tab!=3)
 			setvariable startq,disable= (tab!=3)
 			setvariable endq,disable= (tab!=3)
@@ -2024,11 +2024,11 @@ function Model3DPanel()
 	SetVariable startq,limits={0.001,1.5,0.001},value= root:Packages:ScatterSim3D:startq,live= 1
 	SetVariable endq,pos={260,250},size={170,25},help={"Enter the upper integration q limit for A(energy)"},disable=1,title="End q [nm^(-1)]"
 	SetVariable endq,limits={0.001,1.5,0.001},value= root:Packages:ScatterSim3D:endq,live= 1
-	TitleBox CyrsoxsOldVer,pos={120,320},size={276,10},disable=1,title="Analyze CyRSoXS HDFs (old format - pre v1.0)"
-	TitleBox CyrsoxsOldVer,labelBack=(56576,56576,56576),fSize=11,frame=0
-	TitleBox CyrsoxsOldVer,fColor=(0,0,0)
-	Button Analyze_HDF,pos={170,350},size={55,35},help={"Open parent folder containing CyRSoXS HDF output directory"},disable=1,proc=Analyze_HDF_but,title="\\Z09Load single"
-	Button Analyze_HDF_batch,pos={250,350},size={55,35},help={"Open parent folder containing all simulations"},disable=1,proc=Analyze_HDF_but_batch,title="\\Z09Load batch"
+//	TitleBox CyrsoxsOldVer,pos={120,320},size={276,10},disable=1,title="Analyze CyRSoXS HDFs (old format - pre v1.0)"
+//	TitleBox CyrsoxsOldVer,labelBack=(56576,56576,56576),fSize=11,frame=0
+//	TitleBox CyrsoxsOldVer,fColor=(0,0,0)
+//	Button Analyze_HDF,pos={170,350},size={55,35},help={"Open parent folder containing CyRSoXS HDF output directory"},disable=1,proc=Analyze_HDF_but,title="\\Z09Load single"
+//	Button Analyze_HDF_batch,pos={250,350},size={55,35},help={"Open parent folder containing all simulations"},disable=1,proc=Analyze_HDF_but_batch,title="\\Z09Load batch"
 	setdatafolder foldersave
 End
 
@@ -5825,7 +5825,7 @@ function /wave Analyze_HDF5_dir([pathbase])
 	setscale /i y, wavemin(envalues), wavemax(envalues), int3DvsEnhdf,ratio3DvsEnhdf, para3dvsenhdf, perp3dvsenhdf
 	
 	
-	variable ey =0
+	variable ey =0  
 	variable ez =1
 	variable pe = atan(ey/ez)*180/pi
 	variable pa = atan(-ez/ey)*180/pi
@@ -5914,32 +5914,26 @@ function /wave Analyze_HDF5_dir_new([pathbase])
 	variable fileID
 	HDF5OpenFile /I/Z/R fileID as ""
 	if (V_flag == 0)
-		HDF5LoadGroup /O/R/N=hdf5_params :, fileID, "/igor_parameters"
-		wave/Z igornum, igorvoxelsize
-		variable /G physsize = igorvoxelsize[0]
-		variable /G qnum = igornum[0]
-		if (V_flag != 0)
 		//if igor_parameters group is missing LoadGroup won't be successful 
 		//in that case load config.txt check morphology type
 		//extract simulation size from dimension of dataset 
 		//get PhysSize from Morphology_Parameters
-			string teststring
-			variable hdf5_type
-			grep /q/list/p=simulationpath/E={"MorphologyType",0} "::config.txt"
-			splitstring /E="MorphologyType\s*=\s*([^;]*)" S_value, teststring
-			hdf5_type = str2num(teststring)
-			if (hdf5_type == 0)
-				print "Euler Morphology"
-				HDF5DatasetInfo(fileID, "/Euler_Angles/Mat_1_Vfrac", 0, di)
-			elseif (hdf5_type == 1)
-				print "Vector Morphology"
-				HDF5DatasetInfo(fileID, "/Vector_Morphology/Mat_1_alignment", 0, di)
-			endif
-			variable /G qnum = di.dims[1]
-			HDF5LoadData /O/N=Phys_Size/Z fileID, "/Morphology_Parameters/PhysSize"
-			wave /Z Phys_Size
-			variable /G physsize = Phys_Size[0]
+		string teststring
+		variable hdf5_type
+		grep /q/list/p=simulationpath/E={"MorphologyType",0} "::config.txt"
+		splitstring /E="MorphologyType\s*=\s*([^;]*)" S_value, teststring
+		hdf5_type = str2num(teststring)
+		if (hdf5_type == 0)
+			print "Euler Morphology"
+			int dummye = HDF5DatasetInfo(fileID, "/Euler_Angles/Mat_1_Vfrac", 0, di)
+		elseif (hdf5_type == 1)
+			print "Vector Morphology"
+			int dummyv = HDF5DatasetInfo(fileID, "/Vector_Morphology/Mat_1_alignment", 0, di)
 		endif
+		variable /G qnum = di.dims[1]
+		HDF5LoadData /O/N=Phys_Size/Z fileID, "/Morphology_Parameters/PhysSize"
+		wave /Z Phys_Size
+		variable /G physsize = Phys_Size[0]
 	endif
 	HDF5CloseFile fileID
 	
